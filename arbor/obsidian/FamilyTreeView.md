@@ -377,6 +377,9 @@ function layout(units, edges) {
       u.y = centerY - unitH(u) / 2;
       u.width  = CARD_W;
       u.height = unitH(u);
+      // Place all children in DOB order (oldest first/top). Each child's effective span is
+      // its card height if it is a leaf, or subtreeHeight if it has descendants. This
+      // preserves age ordering across all children regardless of whether they have subtrees.
       const eligible = (childrenOf[uid] || [])
         .filter(cid => {
           const cu = units[cid];
@@ -390,40 +393,20 @@ function layout(units, edges) {
         .sort((a, b) => unitDobV(units[a]) - unitDobV(units[b]));
       if (eligible.length === 0) return;
 
-      const nonLeaves = eligible.filter(cid => !isLeafV(cid));
-      const leaves    = eligible.filter(cid =>  isLeafV(cid));
-
-      if (nonLeaves.length === 0) {
-        // All children are leaves — pack them as a tight cluster centred under parent.
-        const totalH = leaves.reduce((s, cid) => s + unitH(units[cid]), 0) + (leaves.length - 1) * H_GAP;
-        let y = centerY - totalH / 2;
-        for (const cid of leaves) {
+      const totalSpan = eligible.reduce((sum, cid) =>
+          sum + (isLeafV(cid) ? unitH(units[cid]) : subtreeHeight(cid)), 0)
+        + (eligible.length - 1) * H_GAP;
+      let y = centerY - totalSpan / 2;
+      for (const cid of eligible) {
+        if (isLeafV(cid)) {
           units[cid].y      = y;
           units[cid].width  = CARD_W;
           units[cid].height = unitH(units[cid]);
           y += unitH(units[cid]) + H_GAP;
-        }
-        return;
-      }
-
-      // Place non-leaf children using subtree spans.
-      const totalSpan = nonLeaves.reduce((sum, cid) => sum + subtreeHeight(cid), 0) + (nonLeaves.length - 1) * H_GAP;
-      let y = centerY - totalSpan / 2;
-      for (const cid of nonLeaves) {
-        assignY(cid, y + subtreeHeight(cid) / 2);
-        y += subtreeHeight(cid) + H_GAP;
-      }
-
-      // Pack leaves tightly above the non-leaf cluster.
-      if (leaves.length > 0) {
-        const topEdge  = Math.min(...nonLeaves.map(cid => units[cid].y));
-        const leavesH  = leaves.reduce((s, cid) => s + unitH(units[cid]), 0) + (leaves.length - 1) * H_GAP;
-        let ly = topEdge - H_GAP - leavesH;
-        for (const cid of leaves) {
-          units[cid].y      = ly;
-          units[cid].width  = CARD_W;
-          units[cid].height = unitH(units[cid]);
-          ly += unitH(units[cid]) + H_GAP;
+        } else {
+          const span = subtreeHeight(cid);
+          assignY(cid, y + span / 2);
+          y += span + H_GAP;
         }
       }
     }
@@ -641,7 +624,9 @@ function layout(units, edges) {
     u.x = centerX - unitW(u) / 2;
     u.width  = unitW(u);
     u.height = CARD_H;
-    // Split eligible children into non-leaves (subtree-spanned) and leaves (packed tightly).
+    // Place all children in DOB order (oldest left). Each child's effective span is its
+    // card width if it is a leaf, or subtreeWidth if it has descendants. This preserves
+    // age ordering across all children regardless of whether they have their own subtrees.
     // Sibling units are always eligible — no ancestor-parent exclusion.
     const eligible = (childrenOf[uid] || [])
       .filter(cid => {
@@ -652,41 +637,20 @@ function layout(units, edges) {
       .sort((a, b) => unitDob(units[a]) - unitDob(units[b]));
     if (eligible.length === 0) return;
 
-    const nonLeaves = eligible.filter(cid => !isLeaf(cid));
-    const leaves    = eligible.filter(cid =>  isLeaf(cid));
-
-    if (nonLeaves.length === 0) {
-      // All children are leaves — pack them as a tight cluster centred under parent.
-      const totalW = leaves.reduce((s, cid) => s + unitW(units[cid]), 0) + (leaves.length - 1) * H_GAP;
-      let x = centerX - totalW / 2;
-      for (const cid of leaves) {
+    const totalSpan = eligible.reduce((sum, cid) =>
+        sum + (isLeaf(cid) ? unitW(units[cid]) : subtreeWidth(cid)), 0)
+      + (eligible.length - 1) * H_GAP;
+    let x = centerX - totalSpan / 2;
+    for (const cid of eligible) {
+      if (isLeaf(cid)) {
         units[cid].x      = x;
         units[cid].width  = unitW(units[cid]);
         units[cid].height = CARD_H;
         x += unitW(units[cid]) + H_GAP;
-      }
-      return;
-    }
-
-    // Place non-leaf children using subtree spans.
-    const totalSpan = nonLeaves.reduce((sum, cid) => sum + subtreeWidth(cid), 0)
-                      + (nonLeaves.length - 1) * H_GAP;
-    let x = centerX - totalSpan / 2;
-    for (const cid of nonLeaves) {
-      assignX(cid, x + subtreeWidth(cid) / 2);
-      x += subtreeWidth(cid) + H_GAP;
-    }
-
-    // Pack leaves tightly to the left of the non-leaf cluster.
-    if (leaves.length > 0) {
-      const leftEdge = Math.min(...nonLeaves.map(cid => units[cid].x));
-      const leavesW  = leaves.reduce((s, cid) => s + unitW(units[cid]), 0) + (leaves.length - 1) * H_GAP;
-      let lx = leftEdge - H_GAP - leavesW;
-      for (const cid of leaves) {
-        units[cid].x      = lx;
-        units[cid].width  = unitW(units[cid]);
-        units[cid].height = CARD_H;
-        lx += unitW(units[cid]) + H_GAP;
+      } else {
+        const span = subtreeWidth(cid);
+        assignX(cid, x + span / 2);
+        x += span + H_GAP;
       }
     }
   }
