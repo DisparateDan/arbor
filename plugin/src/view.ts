@@ -28,7 +28,16 @@ export class FamilyTreeView extends ItemView {
   }
 
   getViewType(): string { return ARBOR_VIEW_TYPE; }
-  getDisplayText(): string { return "Family Tree"; }
+
+  getDisplayText(): string {
+    if (this.currentFolder) {
+      const parts = this.currentFolder.split("/");
+      const folderName = parts.length > 1 ? parts[parts.length - 2] : parts[0];
+      return `Arbor: ${folderName}`;
+    }
+    return "Arbor";
+  }
+
   getIcon(): string { return "git-fork"; }
 
   async onOpen(): Promise<void> {
@@ -79,6 +88,8 @@ export class FamilyTreeView extends ItemView {
     this.homeRoot      = file.basename;
     this.loadData();
     this.navHistory = [];
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (this.leaf as any).updateHeader();
     this.render(file.basename);
   }
 
@@ -133,8 +144,16 @@ export class FamilyTreeView extends ItemView {
       }
     });
 
+    const parts = this.currentFolder.split("/");
+    const folderName = parts.length > 1 ? parts[parts.length - 2] : parts[0];
+    const titleEl = toolbar.createEl("span", {
+      attr: { style: `font-size:13px; color:${t.text}; flex-shrink:0;` }
+    });
+    titleEl.createEl("strong", { text: "Arbor" });
+    titleEl.createEl("span", { text: `: ${folderName}` });
+
     toolbar.createEl("span", {
-      text: `Selected: ${this.displayName(rootName)} (${Object.keys(people).length} people)`,
+      text: `${this.displayName(rootName)} (${Object.keys(people).length} people)`,
       attr: { style: `font-size:13px; font-weight:600; color:${t.rootBorder}; margin-right:auto;` }
     });
 
@@ -152,21 +171,25 @@ export class FamilyTreeView extends ItemView {
       this.render(this.homeRoot);
     });
 
-    const layoutBtn = toolbar.createEl("button", {
-      text: this.currentLayout === "horizontal" ? "⇄ Vertical" : "↕ Horizontal",
-      attr: { style: btnStyle }
-    });
-    layoutBtn.addEventListener("click", () => {
-      this.currentLayout = this.currentLayout === "horizontal" ? "vertical" : "horizontal";
-      this.render(this.currentRoot);
-    });
-
     const sibBtn = toolbar.createEl("button", {
       text: this.siblingsBloodOnly ? "Show All Siblings" : "Blood Siblings Only",
       attr: { style: btnStyle }
     });
     sibBtn.addEventListener("click", () => {
       this.siblingsBloodOnly = !this.siblingsBloodOnly;
+      this.render(this.currentRoot);
+    });
+
+    toolbar.createEl("span", {
+      attr: { style: `width:1px; height:18px; background:${t.toolbarBorder}; flex-shrink:0;` }
+    });
+
+    const layoutBtn = toolbar.createEl("button", {
+      text: this.currentLayout === "horizontal" ? "⇄ Vertical" : "↕ Horizontal",
+      attr: { style: btnStyle }
+    });
+    layoutBtn.addEventListener("click", () => {
+      this.currentLayout = this.currentLayout === "horizontal" ? "vertical" : "horizontal";
       this.render(this.currentRoot);
     });
 
