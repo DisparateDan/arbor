@@ -1,9 +1,9 @@
 ```dataviewjs
-// CONFIGURATION
+// ── Configuration ─────────────────────────────────────────────────────────
 const ROOT_PERSON   = "Daniel Pusceddu";
 const VAULT_FOLDER  = "FamilyTree/People";
 const SHOW_SIBLINGS = true;
-// ============================================================
+// ══════════════════════════════════════════════════════════════════════════
 
 const CARD_W     = 130;
 const CARD_H     = 58;
@@ -12,7 +12,7 @@ const SPOUSE_GAP = 12;
 const V_GAP      = 120;
 const MAX_LEN    = 18;
 
-// ── Themes ───────────────────────────────────────────────────
+// ── Themes ────────────────────────────────────────────────────────────────
 const THEMES = {
   dark: {
     containerBorder: "#2a3a4a",
@@ -66,49 +66,52 @@ const THEMES = {
   },
 };
 
-let currentTheme = "dark";
-function T() { return THEMES[currentTheme]; }
 
-// ── 1. Load all person notes ─────────────────────────────────
-const allPages = dv.pages(`"${VAULT_FOLDER}"`).where(p => p.ar_type === "person");
-const byName = {};
-for (const p of allPages) { byName[p.file.name] = p; }
+// ══════════════════════════════════════════════════════════════════════════
+// SECTION 1 — DATA LOADING
+// Isolates all DataviewJS / vault-API calls.  In the Obsidian plugin this
+// section is replaced by app.vault + MetadataCache calls.
+// ══════════════════════════════════════════════════════════════════════════
 
-// ── Display name maps ─────────────────────────────────────────
-// stem → "First Last" for UI display
-// "First Last" → stem for config lookup (ROOT_PERSON)
-const stemToDisplay = {};
-const displayToStem = {};
-for (const [stem, page] of Object.entries(byName)) {
-  const display = ((page.first_names || "") + " " + (page.family_name || "")).trim() || stem;
-  stemToDisplay[stem] = display;
-  // If two people have identical display names, last one wins — acceptable edge case
-  displayToStem[display] = stem;
+/** Load all person notes from `folder`.  Returns a plain dict keyed by
+ *  file stem.  This is the only function that touches the DataviewJS API.
+ *  Plugin replacement: app.vault.getMarkdownFiles() + app.metadataCache */
+function loadPeople(folder) {
+  const pages = dv.pages(`"${folder}"`).where(p => p.ar_type === "person");
+  const byName = {};
+  for (const p of pages) byName[p.file.name] = p;
+  return byName;
 }
-function displayName(stem) { return stemToDisplay[stem] || stem; }
-function stemFor(display) {
-  if (displayToStem[display]) return displayToStem[display];
-  // Fallback: find a stem whose display name starts with the given string,
-  // or whose stem starts with it (handles "Daniel Pusceddu" → "Daniel Pusceddu_alek").
-  const lower = display.toLowerCase();
-  for (const [disp, stem] of Object.entries(displayToStem)) {
-    if (disp.toLowerCase().startsWith(lower)) return stem;
+
+/** Build forward + reverse display-name lookup tables from a byName dict.
+ *  Returns { stemToDisplay, displayToStem }. */
+function buildNameIndex(byName) {
+  const stemToDisplay = {};
+  const displayToStem = {};
+  for (const [stem, page] of Object.entries(byName)) {
+    const display = ((page.first_names || "") + " " + (page.family_name || "")).trim() || stem;
+    stemToDisplay[stem] = display;
+    displayToStem[display] = stem;   // last writer wins on collision — acceptable edge case
   }
-  for (const stem of Object.keys(byName)) {
-    if (stem.toLowerCase().startsWith(lower)) return stem;
+  return { stemToDisplay, displayToStem };
+}
+
+/** Build a stem → "m"|"f"|"u" gender map from a byName dict. */
+function buildGenderIndex(byName) {
+  const gender = {};
+  for (const [name, page] of Object.entries(byName)) {
+    const s = String((page && page.sex) || "").toLowerCase().trim();
+    gender[name] = s === "male" ? "m" : s === "female" ? "f" : "u";
   }
-  return display; // last resort — will fail gracefully
+  return gender;
 }
 
-// ── 2. Read gender directly from sex field ───────────────────
-const gender = {};
-for (const [name, page] of Object.entries(byName)) {
-  const s = String((page && page.sex) || "").toLowerCase().trim();
-  gender[name] = s === "male" ? "m" : s === "female" ? "f" : "u";
-}
-function inferGender(name) { return gender[name] || "u"; }
 
-// ── 3. Helpers ───────────────────────────────────────────────
+// ══════════════════════════════════════════════════════════════════════════
+// SECTION 2 — PURE DATA HELPERS
+// Stateless, no external dependencies.  Port verbatim to TypeScript.
+// ══════════════════════════════════════════════════════════════════════════
+
 function resolveName(val) {
   if (!val) return null;
   if (typeof val === "object" && val.path) {
@@ -150,7 +153,15 @@ function getNameLines(name, page) {
   return { first: parts.join(" "), last };
 }
 
-function findChildren(name) {
+
+// ══════════════════════════════════════════════════════════════════════════
+// SECTION 3 — TREE BUILDING
+// Pure: given a byName dict, produces { units, people, edges, bloodLine }.
+// No DataviewJS or DOM dependency.
+// ══════════════════════════════════════════════════════════════════════════
+
+/** Return all vault children of `name`, sorted by DOB ascending. */
+function findChildren(name, byName) {
   const children = [];
   for (const [cName, cPage] of Object.entries(byName)) {
     const f = resolveName((cPage && cPage.father));
@@ -164,8 +175,7 @@ function findChildren(name) {
   });
 }
 
-// ── 4. Build tree ────────────────────────────────────────────
-function buildTree(rootName) {
+function buildTree(rootName, byName, siblingsBloodOnly) {
   const units = {}, people = {}, edges = [];
   const visited = new Set();
   const bloodLine = new Set();
@@ -180,7 +190,6 @@ function buildTree(rootName) {
     return id;
   }
 
-  // Return the DOB year for a person stem, or Infinity as fallback.
   function dobYear(name) {
     const p = byName[name];
     if (!p) return Infinity;
@@ -204,13 +213,10 @@ function buildTree(rootName) {
       const parentUid = newUnit([fName, mName].filter(Boolean), gen - 1, "anc");
 
       if (SHOW_SIBLINGS && (!siblingsBloodOnly || isBlood)) {
-        // Gather all children of this parent pair, including the blood-line person.
-        // Use a Set to deduplicate across father/mother lookups.
         const sibSet = new Set();
         for (const parentName of [fName, mName].filter(Boolean)) {
-          for (const cName of findChildren(parentName)) sibSet.add(cName);
+          for (const cName of findChildren(parentName, byName)) sibSet.add(cName);
         }
-        // Sort by DOB, falling back to vault order (Infinity sorts last).
         const allSibs = [...sibSet].sort((a, b) => dobYear(a) - dobYear(b));
 
         for (const sibName of allSibs) {
@@ -218,14 +224,11 @@ function buildTree(rootName) {
           const dir = isBloodLine ? ((people[sibName] && people[sibName].unitId) ? null : "anc") : "sibling";
 
           if (people[sibName]) {
-            // Unit already exists (e.g. root person or previously visited desc).
-            // Just wire the edge from parent to this existing unit.
             const existingUid = people[sibName].unitId;
             if (!edges.some(e => e.fromUnit === parentUid && e.toUnit === existingUid)) {
               edges.push({ fromUnit: parentUid, toUnit: existingUid, toName: sibName, sibling: !isBloodLine });
             }
           } else {
-            // Create unit for this sibling (or the blood-line person if not yet placed).
             const sibPage    = byName[sibName];
             const sibSpouses = sibPage ? resolveList((sibPage && sibPage.married)) : [];
             const unitDir    = isBloodLine ? "anc" : "sibling";
@@ -234,7 +237,6 @@ function buildTree(rootName) {
           }
         }
       } else {
-        // Siblings disabled — just wire edge from parent to blood-line person.
         const childUid = (people[name] && people[name].unitId);
         if (childUid) {
           if (!edges.some(e => e.fromUnit === parentUid && e.toUnit === childUid)) {
@@ -260,7 +262,7 @@ function buildTree(rootName) {
         for (const spouse of spouses) addAncestors(spouse, gen, false);
       }
     }
-    for (const cName of findChildren(name)) {
+    for (const cName of findChildren(name, byName)) {
       if (!visited.has("desc-" + cName)) addDescendants(cName, gen + 1, true);
       const parentUid = (people[name] && people[name].unitId);
       const childUid  = (people[cName] && people[cName].unitId);
@@ -276,7 +278,7 @@ function buildTree(rootName) {
   // it finds rootName already in people[] and wires an edge rather than
   // creating a spurious dir="anc" unit for the root person.
   bloodLine.add(rootName);
-  const rootPage0   = byName[rootName];
+  const rootPage0    = byName[rootName];
   const rootSpouses0 = rootPage0 ? resolveList((rootPage0 && rootPage0.married)) : [];
   newUnit([rootName, ...rootSpouses0.filter(s => s !== rootName)], 0, "root");
 
@@ -295,12 +297,14 @@ function buildTree(rootName) {
 }
 
 
-// ── 5. Layout ────────────────────────────────────────────────
-let currentLayout       = "horizontal"; // "horizontal" | "vertical"
-let siblingsBloodOnly   = true;
+// ══════════════════════════════════════════════════════════════════════════
+// SECTION 4 — LAYOUT ENGINE
+// Pure algorithm: mutates unit.x / .y / .width / .height fields.
+// No DataviewJS or DOM dependency.
+// ══════════════════════════════════════════════════════════════════════════
 
-function layout(units, edges) {
-  if (currentLayout === "vertical") {
+function layout(units, edges, byName, layoutMode) {
+  if (layoutMode === "vertical") {
     // Vertical hierarchical layout — mirrors horizontal but rotated 90°.
     // Generations become columns (x axis). Children spread vertically
     // under their parent's y centre. Ancestors placed to the left,
@@ -365,7 +369,7 @@ function layout(units, edges) {
     const descRoots  = descUnits.filter(id => {
       const u = units[id];
       if (u.dir === "anc") return false;
-      if (u.dir === "root") return true;  // root always anchors the descent tree
+      if (u.dir === "root") return true;
       const p = parentOf[id];
       if (p && units[p].dir === "anc") return false;
       return !p || units[p].gen < 0;
@@ -377,9 +381,6 @@ function layout(units, edges) {
       u.y = centerY - unitH(u) / 2;
       u.width  = CARD_W;
       u.height = unitH(u);
-      // Place all children in DOB order (oldest first/top). Each child's effective span is
-      // its card height if it is a leaf, or subtreeHeight if it has descendants. This
-      // preserves age ordering across all children regardless of whether they have subtrees.
       const eligible = (childrenOf[uid] || [])
         .filter(cid => {
           const cu = units[cid];
@@ -481,7 +482,6 @@ function layout(units, edges) {
         const u = units[id];
         u.width = CARD_W; u.height = unitH(u);
         u.x = gen * (CARD_W + V_GAP);
-        // Centre over already-placed children (desc-side).
         const placedCh = (childrenOf[id] || []).filter(cid => (units[cid] && units[cid].y) !== undefined);
         if (placedCh.length > 0) {
           const minY = Math.min(...placedCh.map(cid => units[cid].y));
@@ -490,12 +490,10 @@ function layout(units, edges) {
         } else {
           u.y = -unitH(u) / 2;
         }
-        // Now place sibling children that were deferred from assignY.
         const sibCh = (childrenOf[id] || [])
           .filter(cid => units[cid] && units[cid].dir === "sibling" && units[cid].y === undefined)
           .sort((a, b) => unitDobV(units[a]) - unitDobV(units[b]));
         if (sibCh.length > 0) {
-          // Also include the blood-line child(ren) of this ancestor for ordering.
           const bloodCh = (childrenOf[id] || [])
             .filter(cid => units[cid] && units[cid].dir !== "sibling" && units[cid].y !== undefined)
             .sort((a, b) => unitDobV(units[a]) - unitDobV(units[b]));
@@ -507,7 +505,7 @@ function layout(units, edges) {
           for (const cid of allCh) {
             const childGen = units[cid].gen;
             units[cid].y      = y;
-            units[cid].x      = childGen * (CARD_W + V_GAP);  // column for child's own gen
+            units[cid].x      = childGen * (CARD_W + V_GAP);
             units[cid].width  = CARD_W;
             units[cid].height = unitH(units[cid]);
             y += unitH(units[cid]) + H_GAP;
@@ -523,10 +521,10 @@ function layout(units, edges) {
     return;
   }
 
-  // ── Horizontal hierarchical layout ───────────────────────────
-  // Siblings are treated as ordinary children of their parent unit
-  // for layout purposes — folded into subtreeWidth from the start so
-  // the bottom-up width calculation already accounts for them.
+  // ── Horizontal hierarchical layout ────────────────────────────────────
+  // Siblings are treated as ordinary children of their parent unit for
+  // layout purposes — folded into subtreeWidth from the start so the
+  // bottom-up width calculation already accounts for them.
 
   function unitW(u) {
     return u.members.length * CARD_W + (u.members.length - 1) * SPOUSE_GAP;
@@ -544,18 +542,14 @@ function layout(units, edges) {
   }
 
   // Build a unified childrenOf map that includes sibling edges.
-  // Both blood children and sibling units are "children" of their
-  // parent unit for layout purposes; they just render differently.
-  const childrenOf = {}; // unitId -> [unitId]
-  const parentOf   = {}; // unitId -> unitId  (prefer desc/root parents over sibling parents)
+  const childrenOf = {};
+  const parentOf   = {};
   for (const e of edges) {
     const pu = units[e.fromUnit], cu = units[e.toUnit];
     if (!pu || !cu) continue;
     const [ancId, descId] = pu.gen < cu.gen ? [e.fromUnit, e.toUnit] : [e.toUnit, e.fromUnit];
     if (!childrenOf[ancId]) childrenOf[ancId] = [];
     if (!childrenOf[ancId].includes(descId)) childrenOf[ancId].push(descId);
-    // Prefer a desc/root/anc parent over a sibling parent so that blood
-    // children don't get orphaned when a sibling unit edge is seen first.
     const existing = parentOf[descId];
     const ancDir = units[ancId].dir;
     if (!existing) {
@@ -565,11 +559,7 @@ function layout(units, edges) {
     }
   }
 
-  // ── Step 1: Bottom-up subtree width ──────────────────────────
-  // Sibling units are included in their parent's subtree span so that
-  // assignX places them in one pass rather than deferring to Step 6.
-  // A unit is a leaf only when it has no non-ancestor, non-sibling children;
-  // a parent that has only sibling children still gets a real span.
+  // ── Step 1: Bottom-up subtree width ───────────────────────────────────
   function isLeaf(uid) {
     const u = units[uid];
     if (!u || u.dir === "sibling") return false;
@@ -584,12 +574,10 @@ function layout(units, edges) {
     const u = units[uid];
     if (!u) return 0;
     if (u.dir === "sibling") return subtreeWidthCache[uid] = unitW(u);
-    // All eligible children for span: blood children + sibling units (exclude anc).
     const allCh = (childrenOf[uid] || []).filter(
       cid => units[cid] && units[cid].dir !== "anc"
     );
     if (allCh.length === 0) return subtreeWidthCache[uid] = unitW(u);
-    // Only non-leaf children drive the recursive span.
     const nonLeafCh = allCh.filter(cid => !isLeaf(cid));
     if (nonLeafCh.length === 0) return subtreeWidthCache[uid] = unitW(u);
     let w = nonLeafCh.reduce((sum, cid) => sum + subtreeWidth(cid), 0)
@@ -598,36 +586,27 @@ function layout(units, edges) {
     return subtreeWidthCache[uid] = w;
   }
 
-  // ── Step 2: Partition units ───────────────────────────────────
+  // ── Step 2: Partition units ────────────────────────────────────────────
   const allUnitIds = Object.keys(units);
   const descUnits  = allUnitIds.filter(id => units[id].gen >= 0 && units[id].dir !== "anc");
   const ancUnits   = allUnitIds.filter(id => units[id].gen < 0 || units[id].dir === "anc");
 
-  // Descendant roots: gen>=0 units whose parent (if any) is an ancestor,
-  // AND which are not themselves ancestor-type units.
-  // Ancestor units at gen=0 (grandparents with no recorded parents) must
-  // not be treated as descent roots — they'd trigger assignX on their
-  // sibling children, creating a second independent tree centred at x=0.
   const descRoots = descUnits.filter(id => {
     const u = units[id];
     if (u.dir === "anc") return false;
-    if (u.dir === "root") return true;  // root always anchors the descent tree
+    if (u.dir === "root") return true;
     const pid = parentOf[id];
     if (pid && units[pid].dir === "anc") return false;
     return !pid || units[pid].gen < 0;
   });
 
-  // ── Step 3: Top-down x assignment ────────────────────────────
+  // ── Step 3: Top-down x assignment ─────────────────────────────────────
   function assignX(uid, centerX) {
     const u = units[uid];
     if (!u) return;
     u.x = centerX - unitW(u) / 2;
     u.width  = unitW(u);
     u.height = CARD_H;
-    // Place all children in DOB order (oldest left). Each child's effective span is its
-    // card width if it is a leaf, or subtreeWidth if it has descendants. This preserves
-    // age ordering across all children regardless of whether they have their own subtrees.
-    // Sibling units are always eligible — no ancestor-parent exclusion.
     const eligible = (childrenOf[uid] || [])
       .filter(cid => {
         const cu = units[cid];
@@ -665,7 +644,7 @@ function layout(units, edges) {
     }
   }
 
-  // ── Step 4: y coordinates ─────────────────────────────────────
+  // ── Step 4: y coordinates ─────────────────────────────────────────────
   const byGen = {};
   for (const id of allUnitIds) {
     const g = units[id].gen;
@@ -678,10 +657,7 @@ function layout(units, edges) {
     }
   }
 
-  // ── Step 5: Overlap resolution (bidirectional) ────────────────
-  // Resolve descendant generations first, then place ancestors over
-  // the final resolved positions.
-
+  // ── Step 5: Overlap resolution (bidirectional) ─────────────────────────
   // Return the x-centre of a unit's parent, used to keep siblings contiguous
   // during overlap resolution. Falls back to the unit's own x-centre so that
   // parentless units sort stably among themselves.
@@ -706,31 +682,27 @@ function layout(units, edges) {
         return units[a].x - units[b].x;
       });
     if (placed.length < 2) return;
-    // Forward: push right.
     for (let i = 1; i < placed.length; i++) {
       const prev = units[placed[i - 1]], curr = units[placed[i]];
       const minX = prev.x + unitW(prev) + H_GAP;
       if (curr.x < minX) curr.x = minX;
     }
-    // Backward: push left.
     for (let i = placed.length - 2; i >= 0; i--) {
       const next = units[placed[i + 1]], curr = units[placed[i]];
       const maxX = next.x - unitW(curr) - H_GAP;
       if (curr.x > maxX) curr.x = maxX;
     }
-    // Re-centre.
     const left  = units[placed[0]].x;
     const right = units[placed[placed.length - 1]].x + unitW(units[placed[placed.length - 1]]);
     const shift = (left + right) / 2;
     for (const id of placed) units[id].x -= shift;
   }
 
-  // First pass: resolve descendant gens (before ancestor placement).
   for (const [gen, ids] of Object.entries(byGen)) {
     if (parseInt(gen) >= 0) resolveOverlaps(ids);
   }
 
-  // ── Step 6: Ancestors over resolved descendant positions ─────
+  // ── Step 6: Ancestors over resolved descendant positions ──────────────
   const ancGens = [...new Set(ancUnits.map(id => units[id].gen))].sort((a, b) => b - a);
   for (const gen of ancGens) {
     const ids = byGen[gen] || [];
@@ -739,7 +711,6 @@ function layout(units, edges) {
       u.width  = unitW(u);
       u.height = CARD_H;
       u.y      = gen * (CARD_H + V_GAP);
-      // Centre over already-placed children.
       const placedCh = (childrenOf[id] || []).filter(cid => (units[cid] && units[cid].x) !== undefined);
       if (placedCh.length > 0) {
         const minX = Math.min(...placedCh.map(cid => units[cid].x));
@@ -748,14 +719,10 @@ function layout(units, edges) {
       } else {
         u.x = -unitW(u) / 2;
       }
-      // Place any sibling children that were not reached by assignX
-      // (e.g. siblings of the root person at gen 0).
       const unplacedSibs = (childrenOf[id] || [])
         .filter(cid => units[cid] && units[cid].dir === "sibling" && units[cid].x === undefined)
         .sort((a, b) => unitDob(units[a]) - unitDob(units[b]));
       if (unplacedSibs.length > 0) {
-        // Collect all children of this ancestor (placed blood + unplaced sibs)
-        // and lay them out together in DOB order centred on the ancestor.
         const allCh = (childrenOf[id] || [])
           .sort((a, b) => unitDob(units[a]) - unitDob(units[b]));
         const totalW = allCh.reduce((s, cid) => s + unitW(units[cid]), 0) + (allCh.length - 1) * H_GAP;
@@ -780,103 +747,26 @@ function layout(units, edges) {
   }
 }
 
-// ── 6. Card colours ──────────────────────────────────────────
-function cardColors(name, isRoot, isSpouse, isSib) {
-  const t = T();
-  const g = inferGender(name);
-  const fill   = g === "m" ? t.maleFill : g === "f" ? t.femaleFill : t.unknownFill;
-  const border = isRoot ? t.rootBorder
-               : isSib  ? t.sibBorder
-               : g === "m" ? t.maleBorder : g === "f" ? t.femaleBorder : t.unknownBorder;
-  const text   = isRoot ? t.textRoot : isSib ? t.textSib : t.text;
+
+// ══════════════════════════════════════════════════════════════════════════
+// SECTION 5 — SVG RENDERER
+// Pure: takes laid-out data, returns SVG markup strings.
+// No DataviewJS or DOM dependency.
+// ══════════════════════════════════════════════════════════════════════════
+
+function cardColors(name, isRoot, isSpouse, isSib, genderIndex, theme) {
+  const g = genderIndex[name] || "u";
+  const fill   = g === "m" ? theme.maleFill : g === "f" ? theme.femaleFill : theme.unknownFill;
+  const border = isRoot ? theme.rootBorder
+               : isSib  ? theme.sibBorder
+               : g === "m" ? theme.maleBorder : g === "f" ? theme.femaleBorder : theme.unknownBorder;
+  const text   = isRoot ? theme.textRoot : isSib ? theme.textSib : theme.text;
   return { fill, border, text };
 }
 
-// ── 7. Render ────────────────────────────────────────────────
-let currentRoot = stemFor(ROOT_PERSON);
-let outerContainer = null;
-const navHistory = [];
-
-function render(rootName) {
-  currentRoot = rootName;
-  const t = T();
-
-  if (outerContainer) {
-    outerContainer.remove();
-  }
-
-  outerContainer = dv.el("div", "", {
-    attr: { style: "border:1px solid " + t.containerBorder + "; border-radius:8px; overflow:hidden;" }
-  });
-
-  // Build tree data (needed for people count in toolbar)
-  const { units, people, edges, bloodLine } = buildTree(rootName);
-
-  // Toolbar
-  const toolbar = outerContainer.createEl("div", {
-    attr: {
-      style: "display:flex; align-items:center; gap:10px; padding:7px 12px;" +
-             "background:" + t.toolbarBg + "; border-bottom:1px solid " + t.toolbarBorder + ";"
-    }
-  });
-
-  const btnStyle = "background:" + t.btnBg + "; border:1px solid " + t.btnBorder + ";" +
-                   "color:" + t.btnColor + "; padding:3px 10px; border-radius:4px;" +
-                   "cursor:pointer; font-size:12px;";
-
-  toolbar.createEl("span", {
-    text: "Selected: " + displayName(rootName) + " (" + Object.keys(people).length + " people)",
-    attr: { style: "font-size:13px; font-weight:600; color:" + t.rootBorder + "; margin-right:auto;" }
-  });
-
-  const backBtn = toolbar.createEl("button", {
-    text: "← Back",
-    attr: { style: btnStyle + (navHistory.length === 0 ? " opacity:0.35; cursor:default;" : "") }
-  });
-  backBtn.addEventListener("click", () => {
-    if (navHistory.length > 0) render(navHistory.pop());
-  });
-
-  const homeBtn = toolbar.createEl("button", {
-    text: "⌂ Home",
-    attr: { style: btnStyle }
-  });
-  homeBtn.addEventListener("click", () => {
-    navHistory.length = 0;
-    render(stemFor(ROOT_PERSON));
-  });
-
-  const layoutBtn = toolbar.createEl("button", {
-    text: currentLayout === "horizontal" ? "⇄ Vertical" : "↕ Horizontal",
-    attr: { style: btnStyle }
-  });
-  layoutBtn.addEventListener("click", () => {
-    currentLayout = currentLayout === "horizontal" ? "vertical" : "horizontal";
-    render(currentRoot);
-  });
-
-  const sibBtn = toolbar.createEl("button", {
-    text: siblingsBloodOnly ? "Show All Siblings" : "Blood Siblings Only",
-    attr: { style: btnStyle }
-  });
-  sibBtn.addEventListener("click", () => {
-    siblingsBloodOnly = !siblingsBloodOnly;
-    render(currentRoot);
-  });
-
-  const themeBtn = toolbar.createEl("button", {
-    text: t.toggleLabel,
-    attr: { style: btnStyle }
-  });
-  themeBtn.addEventListener("click", () => {
-    currentTheme = currentTheme === "dark" ? "light" : "dark";
-    render(currentRoot);
-  });
-
-  // SVG
-  layout(units, edges);
-
-
+/** Build SVG markup for a fully laid-out tree.
+ *  Returns { svgW, svgH, edgeSVG, cardSVG } — caller assembles the <svg> tag. */
+function buildSVG(units, edges, people, rootName, byName, genderIndex, theme, layoutMode) {
   let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
   for (const u of Object.values(units)) {
     if (u.x === undefined) continue;
@@ -902,11 +792,11 @@ function render(rootName) {
     const key = [e.fromUnit, e.toUnit].sort().join("|");
     if (edgeSeen.has(key)) continue;
     edgeSeen.add(key);
-    const col  = e.sibling ? t.edgeSib : t.edge;
+    const col  = e.sibling ? theme.edgeSib : theme.edge;
     const dash = e.sibling ? " stroke-dasharray='5,3'" : "";
     let d;
 
-    if (currentLayout === "horizontal") {
+    if (layoutMode === "horizontal") {
       const x1    = fromU.x + fromU.width / 2 + ox;
       const y1    = fromU.y + CARD_H + oy;
       const toIdx = e.toName ? toU.members.indexOf(e.toName) : 0;
@@ -916,8 +806,6 @@ function render(rootName) {
       const midY  = (y1 + y2) / 2;
       d = "M" + x1 + "," + y1 + " C" + x1 + "," + midY + " " + x2 + "," + midY + " " + x2 + "," + y2;
     } else {
-      // Ancestors are to the left (lower gen = more negative x), descendants to the right.
-      // Connect from the right edge of the ancestor unit to the left edge of the descendant unit.
       const [ancU, chU] = fromU.gen < toU.gen ? [fromU, toU] : [toU, fromU];
       const toIdx = e.toName ? chU.members.indexOf(e.toName) : 0;
       const toOff = toIdx > 0 ? toIdx * (CARD_H + SPOUSE_GAP) : 0;
@@ -936,10 +824,10 @@ function render(rootName) {
     if (u.x === undefined) continue;
     u.members.forEach((name, i) => {
       const p      = byName[name];
-      const cx     = currentLayout === "horizontal"
+      const cx     = layoutMode === "horizontal"
         ? u.x + i * (CARD_W + SPOUSE_GAP) + ox
         : u.x + ox;
-      const cy     = currentLayout === "horizontal"
+      const cy     = layoutMode === "horizontal"
         ? u.y + oy
         : u.y + i * (CARD_H + SPOUSE_GAP) + oy;
       const isRoot   = name === rootName;
@@ -949,21 +837,21 @@ function render(rootName) {
       const dod      = getYear((p && p.DOD));
       const dates    = dob && dod ? dob + " - " + dod : dob || dod || "";
       const { first, last } = getNameLines(name, p);
-      const { fill, border, text: textCol } = cardColors(name, isRoot, isSpouse, isSib);
-      const datesCol = isRoot ? "rgba(255,255,255,0.75)" : t.dates;
+      const { fill, border, text: textCol } = cardColors(name, isRoot, isSpouse, isSib, genderIndex, theme);
+      const datesCol = isRoot ? "rgba(255,255,255,0.75)" : theme.dates;
       const sw       = isRoot ? "4" : "1";
       const fw       = isRoot ? "700" : "500";
       const mid      = cx + CARD_W / 2;
 
       if (isSpouse) {
-        if (currentLayout === "horizontal") {
+        if (layoutMode === "horizontal") {
           const lx1 = u.x + i * (CARD_W + SPOUSE_GAP) - SPOUSE_GAP + ox;
           const ly  = u.y + CARD_H / 2 + oy;
-          edgeSVG += "<line x1='" + lx1 + "' y1='" + ly + "' x2='" + (lx1 + SPOUSE_GAP) + "' y2='" + ly + "' stroke='" + t.spouseLine + "' stroke-width='2' stroke-dasharray='3,2'/>";
+          edgeSVG += "<line x1='" + lx1 + "' y1='" + ly + "' x2='" + (lx1 + SPOUSE_GAP) + "' y2='" + ly + "' stroke='" + theme.spouseLine + "' stroke-width='2' stroke-dasharray='3,2'/>";
         } else {
           const lx  = u.x + CARD_W / 2 + ox;
           const ly1 = u.y + i * (CARD_H + SPOUSE_GAP) - SPOUSE_GAP + oy;
-          edgeSVG += "<line x1='" + lx + "' y1='" + ly1 + "' x2='" + lx + "' y2='" + (ly1 + SPOUSE_GAP) + "' stroke='" + t.spouseLine + "' stroke-width='2' stroke-dasharray='3,2'/>";
+          edgeSVG += "<line x1='" + lx + "' y1='" + ly1 + "' x2='" + lx + "' y2='" + (ly1 + SPOUSE_GAP) + "' stroke='" + theme.spouseLine + "' stroke-width='2' stroke-dasharray='3,2'/>";
         }
       }
 
@@ -974,8 +862,8 @@ function render(rootName) {
       const lastIsUnknown  = !last  || last.toLowerCase()  === "unknown";
       const firstTxt  = firstIsUnknown ? "UNKNOWN" : trunc(first);
       const lastTxt   = lastIsUnknown  ? "UNKNOWN" : trunc(last);
-      const firstCol  = firstIsUnknown ? t.dates : textCol;
-      const lastCol   = lastIsUnknown  ? t.dates : textCol;
+      const firstCol  = firstIsUnknown ? theme.dates : textCol;
+      const lastCol   = lastIsUnknown  ? theme.dates : textCol;
       const firstSize = firstIsUnknown ? "10" : "14";
       const lastSize  = lastIsUnknown  ? "10" : "14";
 
@@ -985,6 +873,99 @@ function render(rootName) {
       cardSVG += "</g>";
     });
   }
+
+  return { svgW, svgH, edgeSVG, cardSVG };
+}
+
+
+// ══════════════════════════════════════════════════════════════════════════
+// SECTION 6 — UI CONTROLLER
+// DataviewJS / Obsidian-specific.  In the plugin this section becomes an
+// Obsidian ItemView with onOpen(), onClose(), and action handlers.
+// ══════════════════════════════════════════════════════════════════════════
+
+// ── View state ─────────────────────────────────────────────────────────────
+let currentTheme      = "dark";
+let currentLayout     = "horizontal"; // "horizontal" | "vertical"
+let siblingsBloodOnly = true;
+let currentRoot;
+let outerContainer    = null;
+const navHistory      = [];
+
+function T() { return THEMES[currentTheme]; }
+
+function render(rootName) {
+  currentRoot = rootName;
+  const t = T();
+
+  if (outerContainer) outerContainer.remove();
+
+  outerContainer = dv.el("div", "", {
+    attr: { style: "border:1px solid " + t.containerBorder + "; border-radius:8px; overflow:hidden;" }
+  });
+
+  const { units, people, edges, bloodLine } = buildTree(rootName, byName, siblingsBloodOnly);
+
+  // ── Toolbar ──────────────────────────────────────────────────────────────
+  const toolbar = outerContainer.createEl("div", {
+    attr: {
+      style: "display:flex; align-items:center; gap:10px; padding:7px 12px;" +
+             "background:" + t.toolbarBg + "; border-bottom:1px solid " + t.toolbarBorder + ";"
+    }
+  });
+
+  const btnStyle = "background:" + t.btnBg + "; border:1px solid " + t.btnBorder + ";" +
+                   "color:" + t.btnColor + "; padding:3px 10px; border-radius:4px;" +
+                   "cursor:pointer; font-size:12px;";
+
+  toolbar.createEl("span", {
+    text: "Selected: " + displayName(rootName) + " (" + Object.keys(people).length + " people)",
+    attr: { style: "font-size:13px; font-weight:600; color:" + t.rootBorder + "; margin-right:auto;" }
+  });
+
+  const backBtn = toolbar.createEl("button", {
+    text: "← Back",
+    attr: { style: btnStyle + (navHistory.length === 0 ? " opacity:0.35; cursor:default;" : "") }
+  });
+  backBtn.addEventListener("click", () => {
+    if (navHistory.length > 0) render(navHistory.pop());
+  });
+
+  const homeBtn = toolbar.createEl("button", { text: "⌂ Home", attr: { style: btnStyle } });
+  homeBtn.addEventListener("click", () => {
+    navHistory.length = 0;
+    render(stemFor(ROOT_PERSON));
+  });
+
+  const layoutBtn = toolbar.createEl("button", {
+    text: currentLayout === "horizontal" ? "⇄ Vertical" : "↕ Horizontal",
+    attr: { style: btnStyle }
+  });
+  layoutBtn.addEventListener("click", () => {
+    currentLayout = currentLayout === "horizontal" ? "vertical" : "horizontal";
+    render(currentRoot);
+  });
+
+  const sibBtn = toolbar.createEl("button", {
+    text: siblingsBloodOnly ? "Show All Siblings" : "Blood Siblings Only",
+    attr: { style: btnStyle }
+  });
+  sibBtn.addEventListener("click", () => {
+    siblingsBloodOnly = !siblingsBloodOnly;
+    render(currentRoot);
+  });
+
+  const themeBtn = toolbar.createEl("button", { text: t.toggleLabel, attr: { style: btnStyle } });
+  themeBtn.addEventListener("click", () => {
+    currentTheme = currentTheme === "dark" ? "light" : "dark";
+    render(currentRoot);
+  });
+
+  // ── SVG ──────────────────────────────────────────────────────────────────
+  layout(units, edges, byName, currentLayout);
+  const { svgW, svgH, edgeSVG, cardSVG } = buildSVG(
+    units, edges, people, rootName, byName, genderIndex, t, currentLayout
+  );
 
   const svgContainer = outerContainer.createEl("div", {
     attr: { style: "overflow:auto; max-height:80vh;" }
@@ -1009,5 +990,33 @@ function render(rootName) {
   });
 }
 
-render(stemFor(ROOT_PERSON));
+
+// ══════════════════════════════════════════════════════════════════════════
+// BOOTSTRAP
+// Load data once, build indexes, kick off the initial render.
+// In the plugin these become plugin.onload() / view.onOpen().
+// ══════════════════════════════════════════════════════════════════════════
+
+const byName      = loadPeople(VAULT_FOLDER);
+const nameIndex   = buildNameIndex(byName);
+const genderIndex = buildGenderIndex(byName);
+
+/** Resolve a file stem to its display name (e.g. "Daniel Pusceddu_alek" → "Daniel Pusceddu"). */
+function displayName(stem) { return nameIndex.stemToDisplay[stem] || stem; }
+
+/** Resolve a display name (or prefix) to a file stem. */
+function stemFor(display) {
+  if (nameIndex.displayToStem[display]) return nameIndex.displayToStem[display];
+  const lower = display.toLowerCase();
+  for (const [disp, stem] of Object.entries(nameIndex.displayToStem)) {
+    if (disp.toLowerCase().startsWith(lower)) return stem;
+  }
+  for (const stem of Object.keys(byName)) {
+    if (stem.toLowerCase().startsWith(lower)) return stem;
+  }
+  return display; // last resort — will fail gracefully
+}
+
+currentRoot = stemFor(ROOT_PERSON);
+render(currentRoot);
 ```

@@ -1,0 +1,212 @@
+import { ItemView, TFile, WorkspaceLeaf } from "obsidian";
+import { THEMES } from "./constants";
+import { GenderIndex, LayoutMode, NameIndex, PersonPage, ThemeKey } from "./types";
+import { buildGenderIndex, buildNameIndex, loadPeople } from "./loader";
+import { buildTree } from "./tree";
+import { layout } from "./layout";
+import { buildSVG } from "./renderer";
+import type ArborPlugin from "./main";
+
+export const ARBOR_VIEW_TYPE = "arbor-family-tree";
+
+export class FamilyTreeView extends ItemView {
+  private byName: Record<string, PersonPage> = {};
+  private nameIndex: NameIndex = { stemToDisplay: {}, displayToStem: {} };
+  private genderIndex: GenderIndex = {};
+
+  private currentFolder = "";
+  private homeRoot = "";
+
+  private currentTheme: ThemeKey = "dark";
+  private currentLayout: LayoutMode = "horizontal";
+  private siblingsBloodOnly = true;
+  private currentRoot = "";
+  private navHistory: string[] = [];
+
+  constructor(leaf: WorkspaceLeaf, private plugin: ArborPlugin) {
+    super(leaf);
+  }
+
+  getViewType(): string { return ARBOR_VIEW_TYPE; }
+  getDisplayText(): string { return "Family Tree"; }
+  getIcon(): string { return "git-fork"; }
+
+  async onOpen(): Promise<void> {
+    // Respond to file-open events while the view is open.
+    this.registerEvent(
+      this.app.workspace.on("file-open", (file) => this.onFileOpen(file))
+    );
+    this.loadFromActiveFile();
+  }
+
+  async onClose(): Promise<void> {
+    this.contentEl.empty();
+  }
+
+  // ── File context ──────────────────────────────────────────────────────────
+
+  private isPersonFile(file: TFile): boolean {
+    const cache = this.app.metadataCache.getFileCache(file);
+    return cache?.frontmatter?.ar_type === "person";
+  }
+
+  private onFileOpen(file: TFile | null): void {
+    if (!file || !this.isPersonFile(file)) return;
+    const newFolder = file.parent?.path ?? "";
+    if (newFolder === this.currentFolder && this.currentFolder !== "") {
+      // Same dataset — navigate to this person if not already there.
+      if (file.basename !== this.currentRoot) {
+        this.navHistory.push(this.currentRoot);
+        this.render(file.basename);
+      }
+    } else {
+      // Different dataset (or first load) — reload the whole tree.
+      this.loadFromFile(file);
+    }
+  }
+
+  private loadFromActiveFile(): void {
+    const file = this.app.workspace.getActiveFile();
+    if (file && this.isPersonFile(file)) {
+      this.loadFromFile(file);
+    } else {
+      this.showNoPersonMessage();
+    }
+  }
+
+  private loadFromFile(file: TFile): void {
+    this.currentFolder = file.parent?.path ?? "";
+    this.homeRoot      = file.basename;
+    this.loadData();
+    this.navHistory = [];
+    this.render(file.basename);
+  }
+
+  // ── Data ──────────────────────────────────────────────────────────────────
+
+  private loadData(): void {
+    this.byName      = loadPeople(this.app, this.currentFolder);
+    this.nameIndex   = buildNameIndex(this.byName);
+    this.genderIndex = buildGenderIndex(this.byName);
+  }
+
+  private displayName(stem: string): string {
+    return this.nameIndex.stemToDisplay[stem] || stem;
+  }
+
+  // ── Rendering ─────────────────────────────────────────────────────────────
+
+  private showNoPersonMessage(): void {
+    this.contentEl.empty();
+    const wrapper = this.contentEl.createEl("div", {
+      attr: {
+        style: "display:flex; align-items:center; justify-content:center;" +
+               "height:100%; color:var(--text-muted); font-size:14px; text-align:center; padding:2em;"
+      }
+    });
+    wrapper.createEl("span", { text: "Open a person note to view their family tree." });
+  }
+
+  private render(rootName: string): void {
+    this.currentRoot = rootName;
+    const t = THEMES[this.currentTheme];
+
+    this.contentEl.empty();
+
+    const outerContainer = this.contentEl.createEl("div", {
+      attr: { style: `border:1px solid ${t.containerBorder}; border-radius:8px; overflow:hidden;` }
+    });
+
+    const { units, people, edges } = buildTree(rootName, this.byName, this.siblingsBloodOnly);
+
+    // ── Toolbar ──────────────────────────────────────────────────────────────
+    const btnStyle =
+      `background:${t.btnBg}; border:1px solid ${t.btnBorder};` +
+      `color:${t.btnColor}; padding:3px 10px; border-radius:4px;` +
+      `cursor:pointer; font-size:12px;`;
+
+    const toolbar = outerContainer.createEl("div", {
+      attr: {
+        style:
+          `display:flex; align-items:center; gap:10px; padding:7px 12px;` +
+          `background:${t.toolbarBg}; border-bottom:1px solid ${t.toolbarBorder};`
+      }
+    });
+
+    toolbar.createEl("span", {
+      text: `Selected: ${this.displayName(rootName)} (${Object.keys(people).length} people)`,
+      attr: { style: `font-size:13px; font-weight:600; color:${t.rootBorder}; margin-right:auto;` }
+    });
+
+    const backBtn = toolbar.createEl("button", {
+      text: "← Back",
+      attr: { style: btnStyle + (this.navHistory.length === 0 ? " opacity:0.35; cursor:default;" : "") }
+    });
+    backBtn.addEventListener("click", () => {
+      if (this.navHistory.length > 0) this.render(this.navHistory.pop()!);
+    });
+
+    const homeBtn = toolbar.createEl("button", { text: "⌂ Home", attr: { style: btnStyle } });
+    homeBtn.addEventListener("click", () => {
+      this.navHistory.length = 0;
+      this.render(this.homeRoot);
+    });
+
+    const layoutBtn = toolbar.createEl("button", {
+      text: this.currentLayout === "horizontal" ? "⇄ Vertical" : "↕ Horizontal",
+      attr: { style: btnStyle }
+    });
+    layoutBtn.addEventListener("click", () => {
+      this.currentLayout = this.currentLayout === "horizontal" ? "vertical" : "horizontal";
+      this.render(this.currentRoot);
+    });
+
+    const sibBtn = toolbar.createEl("button", {
+      text: this.siblingsBloodOnly ? "Show All Siblings" : "Blood Siblings Only",
+      attr: { style: btnStyle }
+    });
+    sibBtn.addEventListener("click", () => {
+      this.siblingsBloodOnly = !this.siblingsBloodOnly;
+      this.render(this.currentRoot);
+    });
+
+    const themeBtn = toolbar.createEl("button", { text: t.toggleLabel, attr: { style: btnStyle } });
+    themeBtn.addEventListener("click", () => {
+      this.currentTheme = this.currentTheme === "dark" ? "light" : "dark";
+      this.render(this.currentRoot);
+    });
+
+    // ── SVG ──────────────────────────────────────────────────────────────────
+    layout(units, edges, this.byName, this.currentLayout);
+    const { svgW, svgH, edgeSVG, cardSVG } = buildSVG(
+      units, edges, people, rootName, this.byName, this.genderIndex, t, this.currentLayout
+    );
+
+    const svgContainer = outerContainer.createEl("div", {
+      attr: { style: "overflow:auto; max-height:80vh;" }
+    });
+
+    svgContainer.innerHTML =
+      `<svg width='${svgW}' height='${svgH}' xmlns='http://www.w3.org/2000/svg'>` +
+      `<g id='edges'>${edgeSVG}</g><g id='cards'>${cardSVG}</g></svg>`;
+
+    svgContainer.querySelectorAll(".person-card").forEach(el => {
+      el.addEventListener("click", () => {
+        const name = el.getAttribute("data-name");
+        if (name && name !== rootName) {
+          this.navHistory.push(rootName);
+          this.render(name);
+        }
+      });
+      el.addEventListener("dblclick", (evt) => {
+        evt.stopPropagation();
+        const name = el.getAttribute("data-name");
+        if (!name) return;
+        const file = this.app.vault.getAbstractFileByPath(
+          `${this.currentFolder}/${name}.md`
+        );
+        if (file instanceof TFile) this.app.workspace.getLeaf(false).openFile(file);
+      });
+    });
+  }
+}
