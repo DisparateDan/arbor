@@ -5,12 +5,12 @@ const VAULT_FOLDER  = "FamilyTree/People";
 const SHOW_SIBLINGS = true;
 // ============================================================
 
-const CARD_W     = 120;
+const CARD_W     = 130;
 const CARD_H     = 58;
 const H_GAP      = 20;
 const SPOUSE_GAP = 12;
 const V_GAP      = 120;
-const MAX_LEN    = 14;
+const MAX_LEN    = 18;
 
 // ── Themes ───────────────────────────────────────────────────
 const THEMES = {
