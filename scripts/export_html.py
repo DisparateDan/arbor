@@ -778,6 +778,9 @@ function render(rootName) {
   currentRoot = rootName;
   const t = T();
 
+  // Build tree data (needed for people count in toolbar)
+  const { units, people, edges } = buildTree(rootName);
+
   // Rebuild toolbar
   const toolbar = document.getElementById("toolbar");
   toolbar.innerHTML = "";
@@ -790,7 +793,7 @@ function render(rootName) {
                    "cursor:pointer; font-size:12px;";
 
   const rootLabel = document.createElement("span");
-  rootLabel.textContent = displayName(rootName);
+  rootLabel.textContent = "Selected: " + displayName(rootName) + " (" + Object.keys(people).length + " people)";
   rootLabel.style.cssText = "font-size:13px; font-weight:600; color:" + t.rootBorder + "; margin-right:auto;";
   toolbar.appendChild(rootLabel);
 
@@ -831,7 +834,6 @@ function render(rootName) {
   toolbar.appendChild(themeBtn);
 
   // SVG
-  const { units, people, edges } = buildTree(rootName);
   layout(units, edges);
 
   let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;

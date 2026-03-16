@@ -809,6 +809,9 @@ function render(rootName) {
     attr: { style: "border:1px solid " + t.containerBorder + "; border-radius:8px; overflow:hidden;" }
   });
 
+  // Build tree data (needed for people count in toolbar)
+  const { units, people, edges, bloodLine } = buildTree(rootName);
+
   // Toolbar
   const toolbar = outerContainer.createEl("div", {
     attr: {
@@ -822,7 +825,7 @@ function render(rootName) {
                    "cursor:pointer; font-size:12px;";
 
   toolbar.createEl("span", {
-    text: displayName(rootName),
+    text: "Selected: " + displayName(rootName) + " (" + Object.keys(people).length + " people)",
     attr: { style: "font-size:13px; font-weight:600; color:" + t.rootBorder + "; margin-right:auto;" }
   });
 
@@ -871,8 +874,6 @@ function render(rootName) {
   });
 
   // SVG
-  const { units, people, edges, bloodLine } = buildTree(rootName);
-
   layout(units, edges);
 
 
