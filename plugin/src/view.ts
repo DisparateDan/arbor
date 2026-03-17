@@ -207,7 +207,7 @@ export class FamilyTreeView extends ItemView {
     );
 
     const svgContainer = outerContainer.createEl("div", {
-      attr: { style: "overflow:auto; max-height:80vh;" }
+      attr: { style: `overflow:auto; max-height:80vh; background:${t.bodyBg};` }
     });
 
     svgContainer.innerHTML =
