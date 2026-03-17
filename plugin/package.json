@@ -6,14 +6,20 @@
   "scripts": {
     "build:html": "node generate-html-bundle.mjs",
     "dev": "npm run build:html && node esbuild.config.mjs",
-    "build": "npm run build:html && tsc --noEmit --skipLibCheck && node esbuild.config.mjs production"
+    "build": "npm run build:html && tsc --noEmit --skipLibCheck && node esbuild.config.mjs production",
+    "test": "node node_modules/vitest/vitest.mjs run",
+    "test:watch": "node node_modules/vitest/vitest.mjs"
+  },
+  "vitest": {
+    "environment": "node"
   },
   "devDependencies": {
-    "@types/node": "^16.11.6",
+    "@types/node": "^20.19.37",
     "builtin-modules": "^3.3.0",
     "esbuild": "0.21.4",
     "obsidian": "latest",
     "tslib": "2.6.0",
-    "typescript": "5.0.4"
+    "typescript": "5.0.4",
+    "vitest": "^4.1.0"
   }
 }
