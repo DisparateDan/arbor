@@ -1,8 +1,8 @@
 # Arbor Family Tree
 
-An Obsidian plugin for building, visualising, and exporting a family tree stored as plain Markdown notes in your vault.
+An Obsidian plugin for building, visualising, and exporting a family tree stored as Markdown notes in your vault.
 
-Arbor grew out of a personal project to document my own family history. It is not designed to be a canonically correct genealogical model — it is optimised for practical, everyday use by someone who wants to keep family records in Obsidian and share them with non-technical family members. If you have similar motivations, it may suit you well.
+Arbor grew out of a personal project to easily visualise my own family history. It is not designed to be a canonically correct genealogical tool — it is optimised for practical, everyday use by someone who wants to keep family records in Obsidian and share them with non-technical family members. (And hopefully, to look pretty). If you have similar motivations, it may suit you well.
 
 ---
 
@@ -39,22 +39,27 @@ Arbor grew out of a personal project to document my own family history. It is no
 
 ### 1. Create your first person note
 
-Run **Arbor Family Tree: Create Person Note** from the command palette. You will be prompted for a first name and family name. Arbor will create a note with the correct frontmatter in your people folder.
+First, create a folder in your vault to hold your person notes (e.g. `FamilyTree/People`). Person notes must live in a folder — notes in the vault root will not be detected by the plugin.
 
-Alternatively, create a note manually anywhere in your vault using the schema below.
+Then run **Arbor Family Tree: Create Person Note** from the command palette with any person note active, or with your people folder open. You will be prompted for a first name and family name. Arbor will create a note with the correct frontmatter in the same folder as the active note.
+
+Alternatively, create a note manually in your people folder using the schema below.
 
 ### 2. Open the tree view
 
-Click the tree icon in the ribbon, or run **Arbor Family Tree: Open Tree View** from the command palette. The tree will root on whichever person note is currently active.
+Click the tree icon in the ribbon, or run **Arbor Family Tree: Open Tree View** from the command palette. The tree will root on whichever person note is currently active
 
 ### 3. Navigate
 
-- **Click any card** to re-root the tree on that person
+- **Click any card** to re-root the tree on that person and re-draw the tree
 - **← Back** returns to the previous root
 - **⌂ Home** returns to the person who was active when the tree was loaded
 - **Show All Siblings / Blood Siblings Only** toggles sibling display mode
 
 ---
+
+## A note on sibling display modes
+The default view mode shows blood siblings only, and those connected only by marriage will be omitted. When toggled to include siblings (in-laws) connected by marriage the layout can get complicated and lose clarity for large familes.
 
 ## Person note schema
 
@@ -114,6 +119,8 @@ Run **Arbor Family Tree: Export Tree as GEDCOM** to generate a GEDCOM 5.5.1 `.ge
 - GEDCOM export has been tested with Gramps only.
 
 ---
+
+This plugin was developed with the assistance of Claude (Anthropic).
 
 ## License
 
