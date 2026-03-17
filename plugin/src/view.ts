@@ -38,7 +38,7 @@ export class FamilyTreeView extends ItemView {
     return "Arbor";
   }
 
-  getIcon(): string { return "git-fork"; }
+  getIcon(): string { return "trees"; }
 
   async onOpen(): Promise<void> {
     // Respond to file-open events while the view is open.

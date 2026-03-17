@@ -14,7 +14,7 @@ export default class ArborPlugin extends Plugin {
       (leaf) => new FamilyTreeView(leaf, this),
     );
 
-    this.addRibbonIcon("git-fork", "Open Family Tree", () => {
+    this.addRibbonIcon("trees", "Open Family Tree", () => {
       this.activateView();
     });
 
