@@ -133,7 +133,7 @@ python3 scripts/export_gedcom.py --vault ~/Obsidian/PersonalDB --output family.g
 
 ## Planned Features
 
-- GEDCOM export as a plugin command (to replace `scripts/export_gedcom.py`)
+_(none at this time)_
 
 ---
 

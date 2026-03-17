@@ -39,6 +39,7 @@ export const THEMES: Record<ThemeKey, Theme> = {
     btnBg:           "#1e2a3a",
     btnBorder:       "#6a9abb",
     btnColor:        "#ffffff",
+    bodyBg:          "#050810",
     toggleLabel:     "☀ Light",
   },
   light: {
@@ -64,6 +65,7 @@ export const THEMES: Record<ThemeKey, Theme> = {
     btnBg:           "#c8c0b0",
     btnBorder:       "#6a5a4a",
     btnColor:        "#0a0a0a",
+    bodyBg:          "#f0ece0",
     toggleLabel:     "🌙 Dark",
   },
 };

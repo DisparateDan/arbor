@@ -21,6 +21,7 @@ import type { GenderIndex, LayoutMode, PersonPage, ThemeKey } from "./types";
 
 declare const ARBOR_PEOPLE: Record<string, PersonPage>;
 declare const ARBOR_ROOT: string;
+declare const ARBOR_FOLDER: string;
 
 // ── Derived indexes ───────────────────────────────────────────────────────────
 
@@ -72,7 +73,7 @@ function render(rootName: string): void {
 
   const titleEl = document.createElement("span");
   titleEl.style.cssText = `font-size:13px; font-weight:600; color:${t.rootBorder}; margin-right:auto;`;
-  titleEl.textContent = `${displayName(rootName)} (${Object.keys(people).length} people)`;
+  titleEl.textContent = `${ARBOR_FOLDER} - ${displayName(rootName)} (${Object.keys(people).length} people)`;
   toolbar.appendChild(titleEl);
 
   function btn(label: string, disabled = false): HTMLButtonElement {

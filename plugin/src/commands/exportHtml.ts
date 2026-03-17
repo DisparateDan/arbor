@@ -40,10 +40,12 @@ function serialisePeople(byName: Record<string, PersonPage>): Record<string, Pla
 
 // ── HTML assembly ─────────────────────────────────────────────────────────────
 
-function buildHtml(people: Record<string, PlainPerson>, rootStem: string, title: string): string {
+function buildHtml(people: Record<string, PlainPerson>, rootStem: string, rootDisplayName: string, folder: string): string {
   const peopleJson = JSON.stringify(people, null, 2);
   const rootJson   = JSON.stringify(rootStem);
-  const titleEsc   = title.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  const folderName = folder.split("/")[0] || folder;
+  const titleEsc   = `Arbor Family Tree: ${folderName}`
+    .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 
   return `<!DOCTYPE html>
 <html lang="en">
@@ -66,8 +68,9 @@ function buildHtml(people: Record<string, PlainPerson>, rootStem: string, title:
 <div id="arbor-toolbar"></div>
 <div id="arbor-tree"></div>
 <script>
-const ARBOR_PEOPLE = ${peopleJson};
-const ARBOR_ROOT   = ${rootJson};
+const ARBOR_PEOPLE  = ${peopleJson};
+const ARBOR_ROOT    = ${rootJson};
+const ARBOR_FOLDER  = ${JSON.stringify(folderName)};
 </script>
 <script>${HTML_BUNDLE}</script>
 </body>
@@ -196,7 +199,7 @@ export function registerExportHtmlCommand(plugin: ArborPlugin): void {
         try {
           const path = filename.endsWith(".html") ? filename : filename + ".html";
           const people = serialisePeople(byName);
-          const html   = buildHtml(people, rootStem, rootDisplayName);
+          const html   = buildHtml(people, rootStem, rootDisplayName, folder);
 
           const existing = plugin.app.vault.getAbstractFileByPath(path);
           if (existing instanceof TFile) {

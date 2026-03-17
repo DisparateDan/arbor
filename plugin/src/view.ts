@@ -153,7 +153,7 @@ export class FamilyTreeView extends ItemView {
     titleEl.createEl("span", { text: `: ${folderName}` });
 
     toolbar.createEl("span", {
-      text: `${this.displayName(rootName)} (${Object.keys(people).length} people)`,
+      text: ` - ${this.displayName(rootName)} (${Object.keys(people).length} people)`,
       attr: { style: `font-size:13px; font-weight:600; color:${t.rootBorder}; margin-right:auto;` }
     });
 
