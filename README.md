@@ -120,6 +120,12 @@ Run **Arbor Family Tree: Export Tree as GEDCOM** to generate a GEDCOM 5.5.1 `.ge
 
 ---
 
+## Contributing
+
+Contributions are welcome. Please open an issue before starting significant work so we can discuss the approach.
+
+All PRs must pass the CI checks (type check, tests, and build) before review. If you are fixing a bug or adding a feature, please include or update tests for the affected pure logic in `plugin/src/__tests__/`.
+
 This plugin was developed with the assistance of Claude (Anthropic).
 
 ## License
