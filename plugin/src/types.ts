@@ -101,5 +101,6 @@ export type LayoutMode = "horizontal" | "vertical";
 // rootPerson and vaultFolder are derived from the active file at runtime.
 // This interface is reserved for future user preferences (theme, etc.).
 export interface ArborSettings {
+  arborSchemaVersion: number;
   [key: string]: unknown;
 }

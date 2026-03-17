@@ -9,7 +9,11 @@ export const MAX_LEN    = 18;
 
 export const SHOW_SIBLINGS = true;
 
-export const DEFAULT_SETTINGS: ArborSettings = {};
+export const CURRENT_ARBOR_SCHEMA_VERSION = 0;
+
+export const DEFAULT_SETTINGS: ArborSettings = {
+  arborSchemaVersion: CURRENT_ARBOR_SCHEMA_VERSION,
+};
 
 export const THEMES: Record<ThemeKey, Theme> = {
   dark: {
