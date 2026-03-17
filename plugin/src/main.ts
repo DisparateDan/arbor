@@ -3,6 +3,7 @@ import { CURRENT_ARBOR_SCHEMA_VERSION, DEFAULT_SETTINGS } from "./constants";
 import { ArborSettings } from "./types";
 import { ARBOR_VIEW_TYPE, FamilyTreeView } from "./view";
 import { registerNewPersonCommand } from "./commands/newPerson";
+import { registerBulkImportCommand } from "./commands/bulkImport";
 
 export default class ArborPlugin extends Plugin {
   settings: ArborSettings = { ...DEFAULT_SETTINGS };
@@ -27,6 +28,7 @@ export default class ArborPlugin extends Plugin {
     });
 
     registerNewPersonCommand(this);
+    registerBulkImportCommand(this);
   }
 
   onunload(): void {

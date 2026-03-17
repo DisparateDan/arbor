@@ -10,7 +10,7 @@ function randomSuffix(length = 4): string {
   return result;
 }
 
-function uniqueSuffix(existingStems: Set<string>, base: string, length = 4): string {
+export function uniqueSuffix(existingStems: Set<string>, base: string, length = 4): string {
   for (let i = 0; i < 1000; i++) {
     const suffix = randomSuffix(length);
     if (!existingStems.has(`${base}_${suffix}`)) return suffix;
@@ -71,7 +71,7 @@ function findPersonFolders(app: App): string[] {
   return [...folders].sort();
 }
 
-async function resolveTargetFolder(app: App): Promise<string | null> {
+export async function resolveTargetFolder(app: App): Promise<string | null> {
   // Prefer the folder of the currently active person note.
   const active = app.workspace.getActiveFile();
   if (active) {
