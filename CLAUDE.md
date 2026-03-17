@@ -11,8 +11,6 @@ Arbor is a personal family tree project built on top of an Obsidian vault. The g
 ```
 arbor/
 ├── CLAUDE.md
-├── scripts/
-│   └── export_gedcom.py               ← exports vault to GEDCOM 5.5.1
 └── plugin/                            ← Obsidian community plugin (source of truth)
     ├── manifest.json
     ├── package.json
@@ -112,17 +110,6 @@ The HTML export embeds the plugin's own compiled logic — no separately maintai
 `THEMES` in `constants.ts` is the single source of truth for all colours. The HTML export uses the same object via the compiled bundle — no separate copy to maintain.
 
 Theme keys: `containerBorder`, `edge`, `edgeSib`, `spouseLine`, `rootBorder`, `text`, `textRoot`, `textSib`, `dates`, `maleFill`, `maleBorder`, `femaleFill`, `femaleBorder`, `unknownFill`, `unknownBorder`, `sibFill`, `sibBorder`, `toolbarBg`, `toolbarBorder`, `btnBg`, `btnBorder`, `btnColor`, `bodyBg`, `toggleLabel`.
-
----
-
-## `scripts/export_gedcom.py`
-
-Exports all person notes to a GEDCOM 5.5.1 file for use with genealogy applications (tested with Gramps). Not yet ported to a plugin command.
-
-**Usage:**
-```bash
-python3 scripts/export_gedcom.py --vault ~/Obsidian/PersonalDB --output family.ged
-```
 
 ---
 
