@@ -122,9 +122,9 @@ Run **Arbor Family Tree: Export Tree as GEDCOM** to generate a GEDCOM 5.5.1 `.ge
 
 ## Contributing
 
-Contributions are welcome. Please open an issue before starting significant work so we can discuss the approach.
+This project is intentionally kept simple — it's a personal visualisation tool, not a full genealogical application, and I'd like it to stay that way. PRs that add significant complexity in pursuit of correctness or completeness probably aren't a good fit, but bug fixes, performance improvements, and modest UX enhancements are very welcome.
 
-All PRs must pass the CI checks (type check, tests, and build) before review. If you are fixing a bug or adding a feature, please include or update tests for the affected pure logic in `plugin/src/__tests__/`.
+Please open an issue before starting significant work so we can discuss the approach. All PRs must pass the CI checks (type check, tests, and build) before review. If you are fixing a bug or adding a feature, please include or update tests for the affected pure logic in `plugin/src/__tests__/`.
 
 This plugin was developed with the assistance of Claude (Anthropic).
 
