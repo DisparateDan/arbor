@@ -10,19 +10,33 @@ Arbor is a personal family tree project built on top of an Obsidian vault. The g
 
 ```
 arbor/
-├── CLAUDE.md                          ← this file
+├── CLAUDE.md
 ├── scripts/
-│   ├── export_html.py                 ← exports vault to standalone HTML viewer
-│   ├── export_gedcom.py               ← exports vault to GEDCOM 5.5.1
-│   └── new_person.py                  ← creates a new person note with unique suffix
-└── obsidian/
-    ├── FamilyTreeView.md              ← DataviewJS tree renderer (deployed to vault)
-    └── arbor_family_member_template.md ← blank person note template
+│   └── export_gedcom.py               ← exports vault to GEDCOM 5.5.1
+└── plugin/                            ← Obsidian community plugin (source of truth)
+    ├── manifest.json
+    ├── package.json
+    ├── esbuild.config.mjs
+    ├── generate-html-bundle.mjs       ← compiles htmlExport.ts → htmlBundle.ts
+    └── src/
+        ├── main.ts                    ← plugin entry point, command registration
+        ├── view.ts                    ← FamilyTreeView (ItemView)
+        ├── loader.ts                  ← vault data loading
+        ├── tree.ts                    ← buildTree() + pure data helpers
+        ├── layout.ts                  ← layout engine
+        ├── renderer.ts                ← SVG renderer
+        ├── constants.ts               ← THEMES, card dimensions, defaults
+        ├── types.ts                   ← shared TypeScript interfaces
+        ├── htmlExport.ts              ← standalone browser entry point for HTML export
+        ├── htmlBundle.ts              ← AUTO-GENERATED — do not edit
+        └── commands/
+            ├── newPerson.ts           ← "Create Person Note" command
+            ├── bulkImport.ts          ← "Import People from CSV" command
+            └── exportHtml.ts          ← "Export Tree as HTML" command
 ```
 
-**Deployment paths (files are edited here, then copied to the vault):**
-- `obsidian/FamilyTreeView.md` → `~/Obsidian/PersonalDB/FamilyTree/FamilyTreeView.md`
-- `obsidian/arbor_family_member_template.md` → reference only, not auto-deployed
+**Schema reference:**
+- `obsidian/arbor_family_member_template.md` — blank person note template (reference only)
 
 ---
 
@@ -54,77 +68,61 @@ Key rules:
 - Filter field is `ar_type: person` — **not** `type: familymember` (old schema, now obsolete)
 - Sex values are lowercase; blank/missing renders as unknown (neutral card colour)
 - Dates may be plain year ints, approximate strings (`~1923`, `c.1923`), full ISO dates, or Dataview date objects `{year, month, day}`
-- Wikilinks are resolved to bare filename stems by all scripts and the viewer
+- Wikilinks are resolved to bare filename stems by the plugin and all scripts
 
 ---
 
-## Codebase
+## Plugin Architecture
 
-### `obsidian/FamilyTreeView.md`
+### Core modules (`src/`)
 
-Interactive SVG tree rendered inside Obsidian via a `dataviewjs` fenced block. No external dependencies beyond the Dataview plugin.
+The plugin is structured as pure functional modules with a thin Obsidian adapter layer:
 
-**Features:**
-- Horizontal layout (generations as rows, ancestors above, descendants below) and vertical layout (generations as columns, ancestors left, descendants right)
-- Toggle between layouts via toolbar button
-- Siblings shown as muted side nodes connected by dashed edges; toggle between blood-line siblings only and all siblings via toolbar button
-- Cards colour-coded by sex: male = blue tones, female = pink/rose, unknown = neutral
-- Root person card has thicker border and accent colour
-- Spouse pairs share a unit, connected by a short dashed line
-- Click a card to re-centre the tree on that person; Back and Home buttons in toolbar
-- Double-click a card to open that person's note in Obsidian
-- Dark/light theme toggle in toolbar
+- **`loader.ts`** — `loadPeople()` reads vault via `app.metadataCache`; `buildNameIndex()` / `buildGenderIndex()` are pure helpers
+- **`tree.ts`** — `buildTree()` produces `{ units, people, edges, bloodLine }`; also exports `resolveName()`, `resolveList()`, `getYear()`, `getNameLines()`, `trunc()`
+- **`layout.ts`** — `layout()` mutates unit x/y/width/height in place; pure, no Obsidian deps
+- **`renderer.ts`** — `buildSVG()` returns `{ svgW, svgH, edgeSVG, cardSVG }`; pure, no Obsidian deps
+- **`constants.ts`** — `THEMES`, card dimensions, `DEFAULT_SETTINGS`, `CURRENT_ARBOR_SCHEMA_VERSION`
+- **`view.ts`** — `FamilyTreeView` (ItemView); detects active file, loads data, renders tree, handles toolbar interactions
 
-**Key implementation notes:**
-- `byName` dict keyed by file stem, populated from `dv.pages()`
-- `stemFor()` / `displayName()` handle the stem ↔ display-name mapping
-- `buildTree()` produces `units` (co-located person groups), `people` (individual index), and `edges`
-- `layout()` branches on `currentLayout`; both branches share the same overlap-resolution approach
-- `resolveOverlaps` / `resolveOverlapsV` sort by **parent centre first, then own position** to keep siblings from different parents from interleaving — do not regress this
-- Module-level state: `currentTheme`, `currentLayout`, `siblingsBloodOnly`, `currentRoot`, `navHistory`, `outerContainer`
-- The entire `outerContainer` (toolbar + SVG) is replaced on each `render()` call
+### Commands (`src/commands/`)
 
-### `scripts/export_html.py`
+- **`newPerson.ts`** — "Create Person Note": auto-detects people folder, two-field modal, exports `createPersonNote()` and `uniqueSuffix()` for reuse
+- **`bulkImport.ts`** — "Import People from CSV": vault CSV picker, dry-run preview, confirm step, stub creation for relation-only names
+- **`exportHtml.ts`** — "Export Tree as HTML": serialises vault data, assembles standalone HTML embedding the compiled bundle
 
-Exports the vault to a single self-contained `.html` file. The HTML template's JavaScript is kept **exactly in sync** with `FamilyTreeView.md` — same layout logic, same constants, same toolbar buttons, same rendering code. The only intentional differences are:
-- No double-click to open note (not applicable outside Obsidian)
-- Data is embedded as `PEOPLE` JSON dict rather than read via Dataview
-- DOM manipulation uses `document.createElement` instead of `dv.el` / `createEl`
+### HTML export pipeline
 
-**Usage:**
-```bash
-python3 scripts/export_html.py
-python3 scripts/export_html.py --vault ~/Obsidian/PersonalDB --root "Daniel Pusceddu" --output family.html
-```
+The HTML export embeds the plugin's own compiled logic — no separately maintained JS copy:
 
-Requires: `python3-yaml` (`sudo apt install python3-yaml`)
+1. `src/htmlExport.ts` imports `tree.ts`, `layout.ts`, `renderer.ts`, `constants.ts` (no Obsidian deps)
+2. `generate-html-bundle.mjs` compiles it to a minified IIFE via esbuild → writes `src/htmlBundle.ts`
+3. `src/commands/exportHtml.ts` imports `HTML_BUNDLE` from `htmlBundle.ts` and embeds it in the output HTML
 
-### `scripts/export_gedcom.py`
+**`src/htmlBundle.ts` is auto-generated.** Run `npm run build:html` to regenerate after changing tree/layout/renderer logic. The full `npm run build` does this automatically.
 
-Exports all person notes to a GEDCOM 5.5.1 file for use with genealogy applications (tested with Gramps).
+### Schema versioning
 
-**Usage:**
-```bash
-python3 scripts/export_gedcom.py --vault ~/Obsidian/PersonalDB --output family.ged
-```
-
-### `scripts/new_person.py`
-
-Creates a new blank person note with a unique 4-character random suffix in the filename.
-
-**Usage:**
-```bash
-python3 scripts/new_person.py "John Pusceddu"
-python3 scripts/new_person.py "John Pusceddu" --first "John" --family "Pusceddu"
-```
+`arborSchemaVersion` is stored in plugin settings (`data.json`). `runSchemaMigrations()` runs on every `onload()`. Add migration steps to that method when breaking schema changes are needed. Current version: `0`.
 
 ---
 
 ## Colour Theme System
 
-Both `FamilyTreeView.md` and the HTML template in `export_html.py` share identical `THEMES` objects with flat key-value colour palettes. When updating colours, **both files must be updated together**.
+`THEMES` in `constants.ts` is the single source of truth for all colours. The HTML export uses the same object via the compiled bundle — no separate copy to maintain.
 
-Theme keys: `containerBorder`, `edge`, `edgeSib`, `spouseLine`, `rootBorder`, `text`, `textRoot`, `textSib`, `dates`, `maleFill`, `maleBorder`, `femaleFill`, `femaleBorder`, `unknownFill`, `unknownBorder`, `sibFill`, `sibBorder`, `toolbarBg`, `toolbarBorder`, `btnBg`, `btnBorder`, `btnColor`, `bodyBg` (HTML only), `toggleLabel`.
+Theme keys: `containerBorder`, `edge`, `edgeSib`, `spouseLine`, `rootBorder`, `text`, `textRoot`, `textSib`, `dates`, `maleFill`, `maleBorder`, `femaleFill`, `femaleBorder`, `unknownFill`, `unknownBorder`, `sibFill`, `sibBorder`, `toolbarBg`, `toolbarBorder`, `btnBg`, `btnBorder`, `btnColor`, `bodyBg`, `toggleLabel`.
+
+---
+
+## `scripts/export_gedcom.py`
+
+Exports all person notes to a GEDCOM 5.5.1 file for use with genealogy applications (tested with Gramps). Not yet ported to a plugin command.
+
+**Usage:**
+```bash
+python3 scripts/export_gedcom.py --vault ~/Obsidian/PersonalDB --output family.ged
+```
 
 ---
 
@@ -135,16 +133,16 @@ Theme keys: `containerBorder`, `edge`, `edgeSib`, `spouseLine`, `rootBorder`, `t
 
 ## Planned Features
 
-- CSV import utility for bulk-adding people from an external spreadsheet
+- GEDCOM export as a plugin command (to replace `scripts/export_gedcom.py`)
 
 ---
 
 ## Working Conventions
 
-- Fixes are made to `obsidian/FamilyTreeView.md` first, then ported to `scripts/export_html.py`
-- The HTML template JS and the Obsidian DataviewJS must stay in sync — drift between them is a bug
+- The plugin `src/` modules are the source of truth — `obsidian/FamilyTreeView.md` and the Python scripts are deprecated/removed
 - Layout bugs and data/tree-building bugs are distinct failure modes; don't conflate them
-- `resolveOverlaps` must sort by parent-centre first — this is a hard-won fix, do not revert it
+- `resolveOverlaps` / `resolveOverlapsV` must sort by parent-centre first — this is a hard-won fix, do not revert it
 - Prefer systematic logging to diagnose bugs before attempting fixes
 - One bug at a time; clean revert if a fix causes regression rather than patching forward
-- The `ar_type: person` filter is the sole loading criterion — do not add or change filter fields without updating all three scripts and the viewer
+- The `ar_type: person` filter is the sole loading criterion — do not add or change filter fields without updating all plugin modules and `export_gedcom.py`
+- Obsidian command `name` fields should NOT include the plugin name prefix — Obsidian prepends "Arbor Family Tree:" automatically in the command palette
