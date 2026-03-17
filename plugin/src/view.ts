@@ -134,13 +134,14 @@ export class FamilyTreeView extends ItemView {
     const btnStyle =
       `background:${t.btnBg}; border:1px solid ${t.btnBorder};` +
       `color:${t.btnColor}; padding:3px 10px; border-radius:4px;` +
-      `cursor:pointer; font-size:12px;`;
+      `cursor:pointer; font-size:12px; flex-shrink:0;`;
 
     const toolbar = outerContainer.createEl("div", {
       attr: {
         style:
           `display:flex; align-items:center; gap:10px; padding:7px 12px;` +
-          `background:${t.toolbarBg}; border-bottom:1px solid ${t.toolbarBorder};`
+          `background:${t.toolbarBg}; border-bottom:1px solid ${t.toolbarBorder};` +
+          `overflow-x:auto;`
       }
     });
 
