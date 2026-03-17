@@ -2,6 +2,7 @@ import { Notice, Plugin, WorkspaceLeaf } from "obsidian";
 import { CURRENT_ARBOR_SCHEMA_VERSION, DEFAULT_SETTINGS } from "./constants";
 import { ArborSettings } from "./types";
 import { ARBOR_VIEW_TYPE, FamilyTreeView } from "./view";
+import { registerNewPersonCommand } from "./commands/newPerson";
 
 export default class ArborPlugin extends Plugin {
   settings: ArborSettings = { ...DEFAULT_SETTINGS };
@@ -24,6 +25,8 @@ export default class ArborPlugin extends Plugin {
       name: "Open Tree View",
       callback: () => this.activateView(),
     });
+
+    registerNewPersonCommand(this);
   }
 
   onunload(): void {
