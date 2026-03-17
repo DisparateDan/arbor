@@ -4,8 +4,9 @@
   "description": "Obsidian plugin for visualising family trees from person notes",
   "main": "main.js",
   "scripts": {
-    "dev": "node esbuild.config.mjs",
-    "build": "tsc --noEmit --skipLibCheck && node esbuild.config.mjs production"
+    "build:html": "node generate-html-bundle.mjs",
+    "dev": "npm run build:html && node esbuild.config.mjs",
+    "build": "npm run build:html && tsc --noEmit --skipLibCheck && node esbuild.config.mjs production"
   },
   "devDependencies": {
     "@types/node": "^16.11.6",
