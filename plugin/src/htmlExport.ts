@@ -45,6 +45,7 @@ function displayName(stem: string): string {
 let currentTheme: ThemeKey    = "dark";
 let currentLayout: LayoutMode = "horizontal";
 let siblingsBloodOnly         = true;
+let coloredEdges              = false;
 let currentRoot               = "";
 const navHistory: string[]    = [];
 
@@ -108,6 +109,11 @@ function render(rootName: string): void {
     render(currentRoot);
   });
 
+  btn(coloredEdges ? "Mono Lines" : "Colour Lines").addEventListener("click", () => {
+    coloredEdges = !coloredEdges;
+    render(currentRoot);
+  });
+
   btn(t.toggleLabel).addEventListener("click", () => {
     currentTheme = currentTheme === "dark" ? "light" : "dark";
     render(currentRoot);
@@ -116,7 +122,7 @@ function render(rootName: string): void {
   // SVG
   layout(units, edges, ARBOR_PEOPLE, currentLayout);
   const { svgW, svgH, edgeSVG, cardSVG } = buildSVG(
-    units, edges, people, rootName, ARBOR_PEOPLE, genderIndex, t, currentLayout
+    units, edges, people, rootName, ARBOR_PEOPLE, genderIndex, t, currentLayout, coloredEdges
   );
 
   const container = document.getElementById("arbor-tree")!;
