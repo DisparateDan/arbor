@@ -18,6 +18,7 @@ export function formatGedcomDate(val: unknown): string | null {
     return String(d.year);
   }
 
+  if (typeof val === "object") return null;
   let s = String(val).trim();
   let prefix = "";
   const approx = s.match(/^([~c]+\.?)\s*/);
@@ -48,7 +49,7 @@ export function formatGedcomDate(val: unknown): string | null {
 }
 
 export function sexToGedcom(val: unknown): string {
-  const s = String(val ?? "").trim().toLowerCase();
+  const s = typeof val === "string" ? val.trim().toLowerCase() : "";
   if (s === "male")   return "M";
   if (s === "female") return "F";
   return "U";

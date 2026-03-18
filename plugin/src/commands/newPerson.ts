@@ -55,7 +55,7 @@ export async function createPersonNote(
   const suffix = uniqueSuffix(existingStems, fullName);
   const stem = `${fullName}_${suffix}`;
   const path = folder ? `${folder}/${stem}.md` : `${stem}.md`;
-  return app.vault.create(path, makePersonNote(first, family));
+  return await app.vault.create(path, makePersonNote(first, family));
 }
 
 // ── Folder detection ──────────────────────────────────────────────────────────
@@ -97,7 +97,7 @@ export async function resolveTargetFolder(app: App): Promise<string | null> {
 // ── Folder picker (multi-tree vaults) ────────────────────────────────────────
 
 class FolderPickerModal extends FuzzySuggestModal<string> {
-  private chosen = false;
+  private selected: string | null = null;
 
   constructor(
     app: App,
@@ -112,12 +112,12 @@ class FolderPickerModal extends FuzzySuggestModal<string> {
   getItemText(item: string): string { return item; }
 
   onChooseItem(item: string): void {
-    this.chosen = true;
-    this.onPick(item);
+    this.selected = item;
   }
 
   onClose(): void {
-    if (!this.chosen) this.onPick(null);
+    // Obsidian calls close() before onChooseItem; defer so the selection is set first.
+    setTimeout(() => this.onPick(this.selected), 0);
   }
 }
 
@@ -137,7 +137,7 @@ class NewPersonModal extends Modal {
 
   onOpen(): void {
     const { contentEl } = this;
-    contentEl.createEl("h3", { text: "Create Person Note" });
+    contentEl.createEl("h3", { text: "Create person note" });
     contentEl.createEl("p", {
       text: `Folder: ${this.folder || "(vault root)"}`,
       attr: { style: "color: var(--text-muted); font-size: 12px; margin: 0 0 12px;" },
@@ -150,7 +150,7 @@ class NewPersonModal extends Modal {
       .setName("First name(s)")
       .addText(text => {
         firstInput = text.inputEl;
-        text.setPlaceholder("e.g. John William")
+        text.setPlaceholder("John William")
           .onChange(value => { this.first = value.trim(); });
       });
 
@@ -158,7 +158,7 @@ class NewPersonModal extends Modal {
       .setName("Family name")
       .addText(text => {
         familyInput = text.inputEl;
-        text.setPlaceholder("e.g. Smith")
+        text.setPlaceholder("Smith")
           .onChange(value => { this.family = value.trim(); });
       });
 
@@ -199,19 +199,21 @@ class NewPersonModal extends Modal {
 export function registerNewPersonCommand(plugin: ArborPlugin): void {
   plugin.addCommand({
     id: "create-person-note",
-    name: "Create Person Note",
+    name: "Create person note",
     callback: async () => {
       const folder = await resolveTargetFolder(plugin.app);
       if (folder === null) return;
 
-      new NewPersonModal(plugin.app, folder, async (first, family) => {
-        try {
-          const file = await createPersonNote(plugin.app, folder, first, family);
-          new Notice(`Arbor: created ${file.basename}`);
-          await plugin.app.workspace.getLeaf(false).openFile(file);
-        } catch (err) {
-          new Notice(`Arbor: failed to create note — ${err}`);
-        }
+      new NewPersonModal(plugin.app, folder, (first, family) => {
+        void (async () => {
+          try {
+            const file = await createPersonNote(plugin.app, folder, first, family);
+            new Notice(`Arbor: created ${file.basename}`);
+            await plugin.app.workspace.getLeaf(false).openFile(file);
+          } catch (err) {
+            new Notice(`Arbor: failed to create note — ${err}`);
+          }
+        })();
       }).open();
     },
   });

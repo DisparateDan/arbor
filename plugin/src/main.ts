@@ -19,13 +19,13 @@ export default class ArborPlugin extends Plugin {
       (leaf) => new FamilyTreeView(leaf, this),
     );
 
-    this.addRibbonIcon("trees", "Open Tree View", () => {
-      this.activateView();
+    this.addRibbonIcon("trees", "Open tree view", () => {
+      void this.activateView();
     });
 
     this.addCommand({
       id: "open-family-tree",
-      name: "Open Tree View",
+      name: "Open tree view",
       callback: () => this.activateView(),
     });
 

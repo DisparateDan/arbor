@@ -19,7 +19,7 @@ class ExportGedcomModal extends Modal {
 
   onOpen(): void {
     const { contentEl } = this;
-    contentEl.createEl("h3", { text: "Export Tree as GEDCOM" });
+    contentEl.createEl("h3", { text: "Export tree as GEDCOM" });
     contentEl.createEl("p", {
       text: `${this.personCount} people found`,
       attr: { style: "color: var(--text-muted); font-size: 12px; margin: 0 0 12px;" },
@@ -64,7 +64,7 @@ class ExportGedcomModal extends Modal {
 export function registerExportGedcomCommand(plugin: ArborPlugin): void {
   plugin.addCommand({
     id: "export-gedcom",
-    name: "Export Tree as GEDCOM",
+    name: "Export tree as GEDCOM",
     callback: async () => {
       const folder = await resolveTargetFolder(plugin.app);
       if (folder === null) return;
@@ -76,21 +76,23 @@ export function registerExportGedcomCommand(plugin: ArborPlugin): void {
         return;
       }
 
-      new ExportGedcomModal(plugin.app, count, async (filename) => {
-        try {
-          const path   = filename.endsWith(".ged") ? filename : filename + ".ged";
-          const gedcom = buildGedcom(byName, path);
+      new ExportGedcomModal(plugin.app, count, (filename) => {
+        void (async () => {
+          try {
+            const path   = filename.endsWith(".ged") ? filename : filename + ".ged";
+            const gedcom = buildGedcom(byName, path);
 
-          const existing = plugin.app.vault.getAbstractFileByPath(path);
-          if (existing instanceof TFile) {
-            await plugin.app.vault.modify(existing, gedcom);
-          } else {
-            await plugin.app.vault.create(path, gedcom);
+            const existing = plugin.app.vault.getAbstractFileByPath(path);
+            if (existing instanceof TFile) {
+              await plugin.app.vault.modify(existing, gedcom);
+            } else {
+              await plugin.app.vault.create(path, gedcom);
+            }
+            new Notice(`Arbor: exported ${count} people to ${path}`);
+          } catch (err) {
+            new Notice(`Arbor: GEDCOM export failed — ${err}`);
           }
-          new Notice(`Arbor: exported ${count} people to ${path}`);
-        } catch (err) {
-          new Notice(`Arbor: GEDCOM export failed — ${err}`);
-        }
+        })();
       }).open();
     },
   });

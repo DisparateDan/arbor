@@ -11,7 +11,7 @@
  * No Obsidian or Node.js dependencies — browser-only.
  */
 
-import { THEMES, CARD_W, CARD_H, SPOUSE_GAP } from "./constants";
+import { THEMES } from "./constants";
 import { buildTree } from "./tree";
 import { layout } from "./layout";
 import { buildSVG } from "./renderer";
@@ -60,7 +60,7 @@ function render(rootName: string): void {
   document.body.style.background = t.bodyBg ?? "";
 
   const toolbar = document.getElementById("arbor-toolbar")!;
-  toolbar.innerHTML = "";
+  toolbar.replaceChildren();
   toolbar.style.cssText =
     `display:flex; align-items:center; gap:10px; padding:7px 12px;` +
     `background:${t.toolbarBg}; border-bottom:1px solid ${t.toolbarBorder};` +
@@ -126,9 +126,12 @@ function render(rootName: string): void {
   );
 
   const container = document.getElementById("arbor-tree")!;
-  container.innerHTML =
+  container.replaceChildren();
+  const svgStr =
     `<svg width='${svgW}' height='${svgH}' xmlns='http://www.w3.org/2000/svg'>` +
     `<g id='edges'>${edgeSVG}</g><g id='cards'>${cardSVG}</g></svg>`;
+  const svgDoc = new DOMParser().parseFromString(svgStr, "image/svg+xml");
+  container.appendChild(document.adoptNode(svgDoc.documentElement));
 
   container.querySelectorAll(".person-card").forEach(el => {
     el.addEventListener("click", () => {

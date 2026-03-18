@@ -9,6 +9,7 @@ export function resolveName(val: unknown): string | null {
     const parts = (val as { path: string }).path.split("/");
     return parts[parts.length - 1].replace(/\.md$/, "");
   }
+  if (typeof val === "object") return null;
   const s = String(val);
   const m = s.match(/\[\[(.+?)\]\]/);
   return m ? m[1] : s;
@@ -26,6 +27,7 @@ export function getYear(val: unknown): string {
   if (typeof val === "object" && val !== null && "year" in val) {
     return String((val as { year: number }).year);
   }
+  if (typeof val === "object") return "";
   const s = String(val).trim();
   const prefix = (s.match(/^[~c.]+/) || [""])[0];
   const digits = s.replace(/^[~c.]+/, "").slice(0, 4);
@@ -59,9 +61,11 @@ export function findChildren(name: string, byName: Record<string, PersonPage>): 
   return children.sort((a, b) => {
     const pa = byName[a];
     const pb = byName[b];
-    const ya = (pa?.DOB && typeof pa.DOB === "object" && "year" in pa.DOB ? pa.DOB.year : pa?.DOB) ?? 9999;
-    const yb = (pb?.DOB && typeof pb.DOB === "object" && "year" in pb.DOB ? pb.DOB.year : pb?.DOB) ?? 9999;
-    return parseInt(String(ya)) - parseInt(String(yb));
+    const ya = pa?.DOB && typeof pa.DOB === "object" && "year" in pa.DOB
+      ? Number(pa.DOB.year) : (typeof pa?.DOB === "object" ? 9999 : parseInt(String(pa?.DOB ?? 9999)));
+    const yb = pb?.DOB && typeof pb.DOB === "object" && "year" in pb.DOB
+      ? Number(pb.DOB.year) : (typeof pb?.DOB === "object" ? 9999 : parseInt(String(pb?.DOB ?? 9999)));
+    return (isNaN(ya) ? 9999 : ya) - (isNaN(yb) ? 9999 : yb);
   });
 }
 

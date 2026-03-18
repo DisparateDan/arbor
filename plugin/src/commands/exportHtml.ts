@@ -93,7 +93,7 @@ async function resolveRootPerson(app: App, byName: Record<string, PersonPage>): 
 }
 
 class RootPersonModal extends FuzzySuggestModal<string> {
-  private chosen = false;
+  private selected: string | null = null;
 
   constructor(
     app: App,
@@ -109,12 +109,12 @@ class RootPersonModal extends FuzzySuggestModal<string> {
   getItemText(stem: string): string { return this.stemToDisplay[stem] || stem; }
 
   onChooseItem(stem: string): void {
-    this.chosen = true;
-    this.onPick(stem);
+    this.selected = stem;
   }
 
   onClose(): void {
-    if (!this.chosen) this.onPick(null);
+    // Obsidian calls close() before onChooseItem; defer so the selection is set first.
+    setTimeout(() => this.onPick(this.selected), 0);
   }
 }
 
@@ -133,7 +133,7 @@ class ExportModal extends Modal {
 
   onOpen(): void {
     const { contentEl } = this;
-    contentEl.createEl("h3", { text: "Export Tree as HTML" });
+    contentEl.createEl("h3", { text: "Export tree as HTML" });
     contentEl.createEl("p", {
       text: `Root: ${this.rootDisplayName}`,
       attr: { style: "color: var(--text-muted); font-size: 12px; margin: 0 0 12px;" },
@@ -178,7 +178,7 @@ class ExportModal extends Modal {
 export function registerExportHtmlCommand(plugin: ArborPlugin): void {
   plugin.addCommand({
     id: "export-tree-html",
-    name: "Export Tree as HTML",
+    name: "Export tree as HTML",
     callback: async () => {
       const folder = await resolveTargetFolder(plugin.app);
       if (folder === null) return;
@@ -195,22 +195,24 @@ export function registerExportHtmlCommand(plugin: ArborPlugin): void {
       const { stemToDisplay } = buildNameIndex(byName);
       const rootDisplayName = stemToDisplay[rootStem] || rootStem;
 
-      new ExportModal(plugin.app, rootDisplayName, async (filename) => {
-        try {
-          const path = filename.endsWith(".html") ? filename : filename + ".html";
-          const people = serialisePeople(byName);
-          const html   = buildHtml(people, rootStem, rootDisplayName, folder);
+      new ExportModal(plugin.app, rootDisplayName, (filename) => {
+        void (async () => {
+          try {
+            const path = filename.endsWith(".html") ? filename : filename + ".html";
+            const people = serialisePeople(byName);
+            const html   = buildHtml(people, rootStem, rootDisplayName, folder);
 
-          const existing = plugin.app.vault.getAbstractFileByPath(path);
-          if (existing instanceof TFile) {
-            await plugin.app.vault.modify(existing, html);
-          } else {
-            await plugin.app.vault.create(path, html);
+            const existing = plugin.app.vault.getAbstractFileByPath(path);
+            if (existing instanceof TFile) {
+              await plugin.app.vault.modify(existing, html);
+            } else {
+              await plugin.app.vault.create(path, html);
+            }
+            new Notice(`Arbor: exported to ${path}`);
+          } catch (err) {
+            new Notice(`Arbor: export failed — ${err}`);
           }
-          new Notice(`Arbor: exported to ${path}`);
-        } catch (err) {
-          new Notice(`Arbor: export failed — ${err}`);
-        }
+        })();
       }).open();
     },
   });

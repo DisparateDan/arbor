@@ -141,8 +141,9 @@ export function layout(
 
     function parentCentreY(id: string): number {
       const pid = parentOf[id];
-      if (pid && units[pid] && units[pid].y !== undefined) {
-        return units[pid].y! + unitH(units[pid]) / 2;
+      const parent = pid ? units[pid] : undefined;
+      if (parent && parent.y !== undefined) {
+        return parent.y + unitH(parent) / 2;
       }
       const u = units[id];
       return u.y! + unitH(u) / 2;
@@ -199,7 +200,7 @@ export function layout(
           const allCh = [...bloodCh, ...sibCh]
             .sort((a, b) => unitDobV(units[a]) - unitDobV(units[b]));
           const totalH = allCh.reduce((s, cid) => s + unitH(units[cid]), 0) + (allCh.length - 1) * H_GAP;
-          const ancCentreY = u.y! + unitH(u) / 2;
+          const ancCentreY = u.y + unitH(u) / 2;
           let y = ancCentreY - totalH / 2;
           for (const cid of allCh) {
             const childGen = units[cid].gen;
@@ -346,8 +347,9 @@ export function layout(
 
   function parentCentreX(id: string): number {
     const pid = parentOf[id];
-    if (pid && units[pid] && units[pid].x !== undefined) {
-      return units[pid].x! + unitW(units[pid]) / 2;
+    const parent = pid ? units[pid] : undefined;
+    if (parent && parent.x !== undefined) {
+      return parent.x + unitW(parent) / 2;
     }
     const u = units[id];
     return u.x! + unitW(u) / 2;
@@ -404,7 +406,7 @@ export function layout(
       if (unplacedSibs.length > 0) {
         const allCh = (childrenOf[id] || []).sort((a, b) => unitDob(units[a]) - unitDob(units[b]));
         const totalW = allCh.reduce((s, cid) => s + unitW(units[cid]), 0) + (allCh.length - 1) * H_GAP;
-        const ancCentreX = u.x! + unitW(u) / 2;
+        const ancCentreX = u.x + unitW(u) / 2;
         let cx = ancCentreX - totalW / 2;
         const childY = (parseInt(String(gen)) + 1) * (CARD_H + V_GAP);
         for (const cid of allCh) {

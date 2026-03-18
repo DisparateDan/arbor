@@ -1,4 +1,4 @@
-import { ItemView, TFile, WorkspaceLeaf } from "obsidian";
+import { ItemView, sanitizeHTMLToDom, TFile, WorkspaceLeaf } from "obsidian";
 import { THEMES } from "./constants";
 import { GenderIndex, LayoutMode, NameIndex, PersonPage, ThemeKey } from "./types";
 import { buildGenderIndex, buildNameIndex, loadPeople } from "./loader";
@@ -41,7 +41,7 @@ export class FamilyTreeView extends ItemView {
 
   getIcon(): string { return "trees"; }
 
-  async onOpen(): Promise<void> {
+  onOpen(): Promise<void> {
     // Restore persisted toggle states.
     const s = this.plugin.settings;
     if (s.lastTheme)                    this.currentTheme      = s.lastTheme;
@@ -51,13 +51,15 @@ export class FamilyTreeView extends ItemView {
 
     // Respond to file-open events while the view is open.
     this.registerEvent(
-      this.app.workspace.on("file-open", (file) => this.onFileOpen(file))
+      this.app.workspace.on("file-open", (file) => { if (file) this.onFileOpen(file); })
     );
     this.loadFromActiveFile();
+    return Promise.resolve();
   }
 
-  async onClose(): Promise<void> {
+  onClose(): Promise<void> {
     this.contentEl.empty();
+    return Promise.resolve();
   }
 
   // ── File context ──────────────────────────────────────────────────────────
@@ -67,8 +69,8 @@ export class FamilyTreeView extends ItemView {
     return cache?.frontmatter?.ar_type === "person";
   }
 
-  private onFileOpen(file: TFile | null): void {
-    if (!file || !this.isPersonFile(file)) return;
+  private onFileOpen(file: TFile): void {
+    if (!this.isPersonFile(file)) return;
     const newFolder = file.parent?.path ?? "";
     if (newFolder === this.currentFolder && this.currentFolder !== "") {
       // Same dataset — navigate to this person if not already there.
@@ -101,8 +103,7 @@ export class FamilyTreeView extends ItemView {
     this.homeRoot      = file.basename;
     this.loadData();
     this.navHistory = [];
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    (this.leaf as any).updateHeader();
+    (this.leaf as unknown as { updateHeader(): void }).updateHeader();
     this.render(file.basename);
   }
 
@@ -141,7 +142,7 @@ export class FamilyTreeView extends ItemView {
     s.lastLayout        = this.currentLayout;
     s.coloredEdges      = this.coloredEdges;
     s.siblingsBloodOnly = this.siblingsBloodOnly;
-    this.plugin.saveSettings();
+    void this.plugin.saveSettings();
 
     const t = THEMES[this.currentTheme];
 
@@ -182,14 +183,14 @@ export class FamilyTreeView extends ItemView {
     });
 
     const backBtn = toolbar.createEl("button", {
-      text: "← Back",
+      text: "← back",
       attr: { style: btnStyle + (this.navHistory.length === 0 ? " opacity:0.35; cursor:default;" : "") }
     });
     backBtn.addEventListener("click", () => {
       if (this.navHistory.length > 0) this.render(this.navHistory.pop()!);
     });
 
-    const homeBtn = toolbar.createEl("button", { text: "⌂ Home", attr: { style: btnStyle } });
+    const homeBtn = toolbar.createEl("button", { text: "⌂ home", attr: { style: btnStyle } });
     homeBtn.addEventListener("click", () => {
       this.navHistory.length = 0;
       this.render(this.homeRoot);
@@ -242,9 +243,10 @@ export class FamilyTreeView extends ItemView {
       attr: { style: `overflow:auto; max-height:80vh; background:${t.bodyBg};` }
     });
 
-    svgContainer.innerHTML =
+    svgContainer.appendChild(sanitizeHTMLToDom(
       `<svg width='${svgW}' height='${svgH}' xmlns='http://www.w3.org/2000/svg'>` +
-      `<g id='edges'>${edgeSVG}</g><g id='cards'>${cardSVG}</g></svg>`;
+      `<g id='edges'>${edgeSVG}</g><g id='cards'>${cardSVG}</g></svg>`
+    ));
 
     svgContainer.querySelectorAll(".person-card").forEach(el => {
       el.addEventListener("click", () => {

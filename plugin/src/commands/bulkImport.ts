@@ -218,7 +218,7 @@ class ConfirmImportModal extends Modal {
 
   onOpen(): void {
     const { contentEl } = this;
-    contentEl.createEl("h3", { text: "Confirm Import" });
+    contentEl.createEl("h3", { text: "Confirm import" });
 
     const { created, stubs, skipped } = this.preview;
     const rows = [
@@ -259,7 +259,8 @@ class CsvPickerModal extends FuzzySuggestModal<TFile> {
 
   constructor(
     app: App,
-    private onPick: (file: TFile | null) => void,
+    private onPick: (file: TFile) => void,
+    private onCancel: () => void = () => { /* no-op */ },
   ) {
     super(app);
     this.setPlaceholder("Choose a CSV file from your vault…");
@@ -277,7 +278,7 @@ class CsvPickerModal extends FuzzySuggestModal<TFile> {
   }
 
   onClose(): void {
-    if (!this.chosen) this.onPick(null);
+    if (!this.chosen) this.onCancel();
   }
 }
 
@@ -294,7 +295,7 @@ class BulkImportModal extends Modal {
 
   onOpen(): void {
     const { contentEl } = this;
-    contentEl.createEl("h3", { text: "Import People from CSV" });
+    contentEl.createEl("h3", { text: "Import people from CSV" });
     contentEl.createEl("p", {
       text: `Folder: ${this.folder || "(vault root)"}`,
       attr: { style: "color: var(--text-muted); font-size: 12px; margin: 0 0 12px;" },
@@ -306,11 +307,11 @@ class BulkImportModal extends Modal {
 
     new Setting(contentEl)
       .addButton(btn => btn
-        .setButtonText("Download CSV Template")
+        .setButtonText("Download CSV template")
         .onClick(async () => { await saveTemplate(this.app); }),
       )
       .addButton(btn => btn
-        .setButtonText("Choose CSV File")
+        .setButtonText("Choose CSV file")
         .setCta()
         .onClick(() => { this.close(); this.onChooseFile(); }),
       );
@@ -326,28 +327,31 @@ class BulkImportModal extends Modal {
 export function registerBulkImportCommand(plugin: ArborPlugin): void {
   plugin.addCommand({
     id: "import-people-from-csv",
-    name: "Import People from CSV",
+    name: "Import people from CSV",
     callback: async () => {
       const folder = await resolveTargetFolder(plugin.app);
       if (folder === null) return;
 
-      const openPicker = () => new CsvPickerModal(plugin.app, async (csvFile) => {
-        if (!csvFile) return;
-        try {
-          const preview = await runImport(plugin.app, csvFile, folder, true);
-          new ConfirmImportModal(plugin.app, preview, async () => {
-            try {
-              const { created, stubs, skipped } = await runImport(plugin.app, csvFile, folder);
-              new Notice(
-                `Arbor: import complete — ${created} created, ${stubs} stub(s), ${skipped} skipped`
-              );
-            } catch (err) {
-              new Notice(`Arbor: import failed — ${err}`);
-            }
-          }).open();
-        } catch (err) {
-          new Notice(`Arbor: import failed — ${err}`);
-        }
+      const openPicker = () => new CsvPickerModal(plugin.app, (csvFile) => {
+        void (async () => {
+          try {
+            const preview = await runImport(plugin.app, csvFile, folder, true);
+            new ConfirmImportModal(plugin.app, preview, () => {
+              void (async () => {
+                try {
+                  const { created, stubs, skipped } = await runImport(plugin.app, csvFile, folder);
+                  new Notice(
+                    `Arbor: import complete — ${created} created, ${stubs} stub(s), ${skipped} skipped`
+                  );
+                } catch (err) {
+                  new Notice(`Arbor: import failed — ${err}`);
+                }
+              })();
+            }).open();
+          } catch (err) {
+            new Notice(`Arbor: import failed — ${err}`);
+          }
+        })();
       }).open();
 
       new BulkImportModal(plugin.app, folder, openPicker).open();
