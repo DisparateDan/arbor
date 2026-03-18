@@ -1,7 +1,7 @@
 ---
 ar_type: person
 first_names: Edward VI
-family_name:
+family_name: Tudor
 sex: male
 DOB: 1537
 DOD: 1553
