@@ -37,6 +37,7 @@ export function buildSVG(
   genderIndex: GenderIndex,
   theme: Theme,
   layoutMode: LayoutMode,
+  coloredEdges = true,
 ): SVGResult {
   let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
   for (const u of Object.values(units)) {
@@ -85,9 +86,8 @@ export function buildSVG(
     const dash = sibling ? " stroke-dasharray='5,3'" : "";
 
     if (layoutMode === "horizontal") {
+      const px = ancU.x! + (ancU.width ?? CARD_W) / 2 + ox;
       const py = ancU.y! + CARD_H + oy;
-      const spreadW    = (ancU.width ?? CARD_W) * 0.7;
-      const spreadLeft = ancU.x! + (ancU.width ?? CARD_W) / 2 - spreadW / 2 + ox;
 
       const withPos = group.map(ce => {
         const chU   = units[ce.chId];
@@ -98,17 +98,15 @@ export function buildSVG(
 
       const n = withPos.length;
       withPos.forEach(({ cx, cy }, i) => {
-        const exitX = n === 1 ? ancU.x! + (ancU.width ?? CARD_W) / 2 + ox
-                              : spreadLeft + (i / (n - 1)) * spreadW;
+        const edgeCol = (coloredEdges && n > 1) ? theme.edgePalette[i % theme.edgePalette.length] : col;
         const dy = cy - py;
-        const d = `M${exitX},${py} C${exitX},${py + dy * 0.15} ${cx},${cy - dy * 0.15} ${cx},${cy}`;
-        edgeSVG += `<path d='${d}' fill='none' stroke='${col}' stroke-width='1.5'${dash}/>`;
+        const d = `M${px},${py} C${px},${py + dy * 0.5} ${cx},${cy - dy * 0.5} ${cx},${cy}`;
+        edgeSVG += `<path d='${d}' fill='none' stroke='${edgeCol}' stroke-width='1.5'${dash}/>`;
       });
 
     } else {
       const px = ancU.x! + (ancU.width ?? 0) + ox;
-      const spreadH  = (ancU.height ?? CARD_H) * 0.7;
-      const spreadTop = ancU.y! + (ancU.height ?? CARD_H) / 2 - spreadH / 2 + oy;
+      const py = ancU.y! + (ancU.height ?? CARD_H) / 2 + oy;
 
       const withPos = group.map(ce => {
         const chU   = units[ce.chId];
@@ -119,11 +117,10 @@ export function buildSVG(
 
       const n = withPos.length;
       withPos.forEach(({ cx, cy }, i) => {
-        const exitY = n === 1 ? ancU.y! + (ancU.height ?? CARD_H) / 2 + oy
-                              : spreadTop + (i / (n - 1)) * spreadH;
+        const edgeCol = (coloredEdges && n > 1) ? theme.edgePalette[i % theme.edgePalette.length] : col;
         const dx = cx - px;
-        const d = `M${px},${exitY} C${px + dx * 0.15},${exitY} ${cx - dx * 0.15},${cy} ${cx},${cy}`;
-        edgeSVG += `<path d='${d}' fill='none' stroke='${col}' stroke-width='1.5'${dash}/>`;
+        const d = `M${px},${py} C${px + dx * 0.5},${py} ${cx - dx * 0.5},${cy} ${cx},${cy}`;
+        edgeSVG += `<path d='${d}' fill='none' stroke='${edgeCol}' stroke-width='1.5'${dash}/>`;
       });
     }
   }

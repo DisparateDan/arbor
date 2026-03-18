@@ -71,6 +71,7 @@ export interface Theme {
   containerBorder: string;
   edge: string;
   edgeSib: string;
+  edgePalette: string[];
   spouseLine: string;
   rootBorder: string;
   text: string;

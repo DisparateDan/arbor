@@ -19,6 +19,7 @@ export class FamilyTreeView extends ItemView {
 
   private currentTheme: ThemeKey = "dark";
   private currentLayout: LayoutMode = "horizontal";
+  private coloredEdges = false;
   private siblingsBloodOnly = true;
   private currentRoot = "";
   private navHistory: string[] = [];
@@ -194,6 +195,15 @@ export class FamilyTreeView extends ItemView {
       this.render(this.currentRoot);
     });
 
+    const edgeColBtn = toolbar.createEl("button", {
+      text: this.coloredEdges ? "Mono Lines" : "Colour Lines",
+      attr: { style: btnStyle }
+    });
+    edgeColBtn.addEventListener("click", () => {
+      this.coloredEdges = !this.coloredEdges;
+      this.render(this.currentRoot);
+    });
+
     const themeBtn = toolbar.createEl("button", { text: t.toggleLabel, attr: { style: btnStyle } });
     themeBtn.addEventListener("click", () => {
       this.currentTheme = this.currentTheme === "dark" ? "light" : "dark";
@@ -203,7 +213,7 @@ export class FamilyTreeView extends ItemView {
     // ── SVG ──────────────────────────────────────────────────────────────────
     layout(units, edges, this.byName, this.currentLayout);
     const { svgW, svgH, edgeSVG, cardSVG } = buildSVG(
-      units, edges, people, rootName, this.byName, this.genderIndex, t, this.currentLayout
+      units, edges, people, rootName, this.byName, this.genderIndex, t, this.currentLayout, this.coloredEdges
     );
 
     const svgContainer = outerContainer.createEl("div", {
