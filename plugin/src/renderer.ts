@@ -54,41 +54,78 @@ export function buildSVG(
 
   let edgeSVG = "";
   let cardSVG = "";
+
+  // Pass 1: canonicalise and deduplicate edges, group by (ancestor, sibling flag)
+  type CanonEdge = { ancId: string; chId: string; toName: string; sibling: boolean };
   const edgeSeen = new Set<string>();
+  const ancGroups = new Map<string, CanonEdge[]>();
 
   for (const e of edges) {
     const fromU = units[e.fromUnit];
     const toU   = units[e.toUnit];
     if (!fromU || !toU || fromU.x === undefined || toU.x === undefined) continue;
-    const key = [e.fromUnit, e.toUnit].sort().join("|");
+
+    const ancId = fromU.gen <= toU.gen ? e.fromUnit : e.toUnit;
+    const chId  = ancId === e.fromUnit ? e.toUnit   : e.fromUnit;
+
+    const key = `${ancId}|${chId}`;
     if (edgeSeen.has(key)) continue;
     edgeSeen.add(key);
-    const col  = e.sibling ? theme.edgeSib : theme.edge;
-    const dash = e.sibling ? " stroke-dasharray='5,3'" : "";
-    let d: string;
+
+    const groupKey = `${ancId}::${e.sibling}`;
+    if (!ancGroups.has(groupKey)) ancGroups.set(groupKey, []);
+    ancGroups.get(groupKey)!.push({ ancId, chId, toName: e.toName, sibling: e.sibling });
+  }
+
+  // Pass 2: emit one Bézier per edge, exit points spread across parent card edge
+  for (const group of ancGroups.values()) {
+    const { ancId, sibling } = group[0];
+    const ancU = units[ancId];
+    const col  = sibling ? theme.edgeSib : theme.edge;
+    const dash = sibling ? " stroke-dasharray='5,3'" : "";
 
     if (layoutMode === "horizontal") {
-      const x1    = fromU.x + (fromU.width ?? 0) / 2 + ox;
-      const y1    = fromU.y! + CARD_H + oy;
-      const toIdx = e.toName ? toU.members.indexOf(e.toName) : 0;
-      const toOff = toIdx > 0 ? toIdx * (CARD_W + SPOUSE_GAP) : 0;
-      const x2    = toU.x + toOff + CARD_W / 2 + ox;
-      const y2    = toU.y! + oy;
-      const midY  = (y1 + y2) / 2;
-      d = `M${x1},${y1} C${x1},${midY} ${x2},${midY} ${x2},${y2}`;
-    } else {
-      const [ancU, chU] = fromU.gen < toU.gen ? [fromU, toU] : [toU, fromU];
-      const toIdx = e.toName ? chU.members.indexOf(e.toName) : 0;
-      const toOff = toIdx > 0 ? toIdx * (CARD_H + SPOUSE_GAP) : 0;
-      const x1   = ancU.x! + (ancU.width ?? 0) + ox;
-      const y1   = ancU.y! + (ancU.height ?? 0) / 2 + oy;
-      const x2   = chU.x! + ox;
-      const y2   = chU.y! + toOff + CARD_H / 2 + oy;
-      const midX = (x1 + x2) / 2;
-      d = `M${x1},${y1} C${midX},${y1} ${midX},${y2} ${x2},${y2}`;
-    }
+      const py = ancU.y! + CARD_H + oy;
+      const spreadW    = (ancU.width ?? CARD_W) * 0.7;
+      const spreadLeft = ancU.x! + (ancU.width ?? CARD_W) / 2 - spreadW / 2 + ox;
 
-    edgeSVG += `<path d='${d}' fill='none' stroke='${col}' stroke-width='1.5'${dash}/>`;
+      const withPos = group.map(ce => {
+        const chU   = units[ce.chId];
+        const toIdx = ce.toName ? chU.members.indexOf(ce.toName) : 0;
+        const toOff = toIdx > 0 ? toIdx * (CARD_W + SPOUSE_GAP) : 0;
+        return { ...ce, cx: chU.x! + toOff + CARD_W / 2 + ox, cy: chU.y! + oy };
+      }).sort((a, b) => a.cx - b.cx);
+
+      const n = withPos.length;
+      withPos.forEach(({ cx, cy }, i) => {
+        const exitX = n === 1 ? ancU.x! + (ancU.width ?? CARD_W) / 2 + ox
+                              : spreadLeft + (i / (n - 1)) * spreadW;
+        const dy = cy - py;
+        const d = `M${exitX},${py} C${exitX},${py + dy * 0.15} ${cx},${cy - dy * 0.15} ${cx},${cy}`;
+        edgeSVG += `<path d='${d}' fill='none' stroke='${col}' stroke-width='1.5'${dash}/>`;
+      });
+
+    } else {
+      const px = ancU.x! + (ancU.width ?? 0) + ox;
+      const spreadH  = (ancU.height ?? CARD_H) * 0.7;
+      const spreadTop = ancU.y! + (ancU.height ?? CARD_H) / 2 - spreadH / 2 + oy;
+
+      const withPos = group.map(ce => {
+        const chU   = units[ce.chId];
+        const toIdx = ce.toName ? chU.members.indexOf(ce.toName) : 0;
+        const toOff = toIdx > 0 ? toIdx * (CARD_H + SPOUSE_GAP) : 0;
+        return { ...ce, cx: chU.x! + ox, cy: chU.y! + toOff + CARD_H / 2 + oy };
+      }).sort((a, b) => a.cy - b.cy);
+
+      const n = withPos.length;
+      withPos.forEach(({ cx, cy }, i) => {
+        const exitY = n === 1 ? ancU.y! + (ancU.height ?? CARD_H) / 2 + oy
+                              : spreadTop + (i / (n - 1)) * spreadH;
+        const dx = cx - px;
+        const d = `M${px},${exitY} C${px + dx * 0.15},${exitY} ${cx - dx * 0.15},${cy} ${cx},${cy}`;
+        edgeSVG += `<path d='${d}' fill='none' stroke='${col}' stroke-width='1.5'${dash}/>`;
+      });
+    }
   }
 
   for (const u of Object.values(units)) {
