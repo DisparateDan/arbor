@@ -9,7 +9,7 @@ export function resolveName(val: unknown): string | null {
     const parts = (val as { path: string }).path.split("/");
     return parts[parts.length - 1].replace(/\.md$/, "");
   }
-  if (typeof val === "object") return null;
+  if (typeof val !== "string" && typeof val !== "number") return null;
   const s = String(val);
   const m = s.match(/\[\[(.+?)\]\]/);
   return m ? m[1] : s;
@@ -27,7 +27,7 @@ export function getYear(val: unknown): string {
   if (typeof val === "object" && val !== null && "year" in val) {
     return String((val as { year: number }).year);
   }
-  if (typeof val === "object") return "";
+  if (typeof val !== "string" && typeof val !== "number") return "";
   const s = String(val).trim();
   const prefix = (s.match(/^[~c.]+/) || [""])[0];
   const digits = s.replace(/^[~c.]+/, "").slice(0, 4);

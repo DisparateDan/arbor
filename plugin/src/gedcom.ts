@@ -18,7 +18,7 @@ export function formatGedcomDate(val: unknown): string | null {
     return String(d.year);
   }
 
-  if (typeof val === "object") return null;
+  if (typeof val !== "string" && typeof val !== "number") return null;
   let s = String(val).trim();
   let prefix = "";
   const approx = s.match(/^([~c]+\.?)\s*/);
