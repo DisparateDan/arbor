@@ -36,7 +36,6 @@ export default class ArborPlugin extends Plugin {
   }
 
   onunload(): void {
-    this.app.workspace.detachLeavesOfType(ARBOR_VIEW_TYPE);
   }
 
   async activateView(): Promise<void> {

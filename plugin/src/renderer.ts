@@ -2,6 +2,11 @@ import { CARD_W, CARD_H, SPOUSE_GAP } from "./constants";
 import { Edge, GenderIndex, LayoutMode, PersonEntry, PersonPage, Theme, Unit } from "./types";
 import { getYear, getNameLines, trunc } from "./tree";
 
+function escapeHtml(s: string): string {
+  return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+          .replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+}
+
 export function cardColors(
   name: string,
   isRoot: boolean,
@@ -140,7 +145,7 @@ export function buildSVG(
       const isSib    = u.dir === "sibling";
       const dob      = getYear(p?.DOB);
       const dod      = getYear(p?.DOD);
-      const dates    = dob && dod ? `${dob} - ${dod}` : dob || dod || "";
+      const dates    = escapeHtml(dob && dod ? `${dob} - ${dod}` : dob || dod || "");
       const { first, last } = getNameLines(name, p ?? null);
       const { fill, border, text: textCol } = cardColors(name, isRoot, isSpouse, isSib, genderIndex, theme);
       const datesCol = isRoot ? "rgba(255,255,255,0.75)" : theme.dates;
@@ -162,14 +167,14 @@ export function buildSVG(
 
       const firstIsUnknown = !first || first.toLowerCase() === "unknown";
       const lastIsUnknown  = !last  || last.toLowerCase()  === "unknown";
-      const firstTxt  = firstIsUnknown ? "UNKNOWN" : trunc(first);
-      const lastTxt   = lastIsUnknown  ? "UNKNOWN" : trunc(last);
+      const firstTxt  = firstIsUnknown ? "UNKNOWN" : escapeHtml(trunc(first));
+      const lastTxt   = lastIsUnknown  ? "UNKNOWN" : escapeHtml(trunc(last));
       const firstCol  = firstIsUnknown ? theme.dates : textCol;
       const lastCol   = lastIsUnknown  ? theme.dates : textCol;
       const firstSize = firstIsUnknown ? "10" : "14";
       const lastSize  = lastIsUnknown  ? "10" : "14";
 
-      cardSVG += `<g class='person-card' data-name='${name.replace(/'/g, "&#39;")}' style='cursor:pointer'>`;
+      cardSVG += `<g class='person-card' data-name='${escapeHtml(name)}' style='cursor:pointer'>`;
       cardSVG += `<rect x='${cx}' y='${cy}' width='${CARD_W}' height='${CARD_H}' rx='6' fill='${fill}' stroke='${border}' stroke-width='${sw}'/>`;
       cardSVG += `<text x='${mid}' y='${cy + 16}' text-anchor='middle' font-size='${firstSize}' font-weight='${fw}' fill='${firstCol}' font-family='var(--font-interface)'>${firstTxt}</text>`;
       cardSVG += `<text x='${mid}' y='${cy + 29}' text-anchor='middle' font-size='${lastSize}'  font-weight='${fw}' fill='${lastCol}'  font-family='var(--font-interface)'>${lastTxt}</text>`;
