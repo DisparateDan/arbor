@@ -7,7 +7,7 @@
     "build:html": "node generate-html-bundle.mjs",
     "dev": "npm run build:html && node esbuild.config.mjs",
     "build": "npm run build:html && tsc --noEmit --skipLibCheck && node esbuild.config.mjs production",
-    "deploy": "npm run build && cp main.js manifest.json ~/Obsidian/PersonalDB/.obsidian/plugins/arbor-family-tree/",
+    "deploy": "npm run build && cp main.js manifest.json ~/Obsidian/PersonalDB/.obsidian/plugins/arbor-family-tree/ && cp manifest.json ../manifest.json",
     "test": "node node_modules/vitest/vitest.mjs run",
     "test:watch": "node node_modules/vitest/vitest.mjs"
   },
