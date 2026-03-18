@@ -11,7 +11,9 @@ Arbor grew out of a personal project to easily visualise my own family history. 
 - **Interactive tree view** — visualise your family tree as a navigable SVG diagram, rooted on any person
 - **Dark and light themes**
 - **Horizontal and vertical layout modes**
+- **Colour-coded edges** — edges from the same parent cycle through a muted colour palette to help trace individual lines; toggle between coloured and monochrome at any time
 - **Siblings toggle** — show blood-line siblings only, or all siblings including married-in relatives
+- **Persistent session state** — toolbar settings and last-viewed person are remembered between sessions
 - **Create Person Note** — modal command to add a new person note with the correct frontmatter
 - **Import People from CSV** — bulk-create person notes from a CSV file, with dry-run preview
 - **Export Tree as HTML** — generates a fully self-contained, interactive HTML file for sharing with anyone
@@ -47,7 +49,7 @@ Alternatively, create a note manually in your people folder using the schema bel
 
 ### 2. Open the tree view
 
-Click the tree icon in the ribbon, or run **Arbor Family Tree: Open Tree View** from the command palette. The tree will root on whichever person note is currently active
+Click the tree icon in the ribbon, or run **Arbor Family Tree: Open Tree View** from the command palette. On first use the tree roots on whichever person note is currently active. After that, the ribbon icon restores the last-viewed person and all toolbar settings automatically.
 
 ### 3. Navigate
 
@@ -55,6 +57,9 @@ Click the tree icon in the ribbon, or run **Arbor Family Tree: Open Tree View** 
 - **← Back** returns to the previous root
 - **⌂ Home** returns to the person who was active when the tree was loaded
 - **Show All Siblings / Blood Siblings Only** toggles sibling display mode
+- **Colour Lines / Mono Lines** toggles between colour-coded and monochrome edges
+- **⇄ Vertical / ↕ Horizontal** switches layout orientation
+- **☀ Light / 🌙 Dark** switches colour theme
 
 ---
 
@@ -105,7 +110,7 @@ Arbor supports multiple independent family trees in one vault. Place each tree's
 
 ### HTML export
 
-Run **Arbor Family Tree: Export Tree as HTML** to generate a standalone HTML file saved to your vault root. The file is fully self-contained — no internet connection required — and can be shared with anyone who has a web browser. It includes the full interactive toolbar (navigation, theme toggle, layout toggle).
+Run **Arbor Family Tree: Export Tree as HTML** to generate a standalone HTML file saved to your vault root. The file is fully self-contained — no internet connection required — and can be shared with anyone who has a web browser. It includes the full interactive toolbar (navigation, theme toggle, layout toggle, colour lines toggle) and renders with coloured edges enabled by default.
 
 ### GEDCOM export
 
