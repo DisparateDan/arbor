@@ -103,5 +103,11 @@ export type LayoutMode = "horizontal" | "vertical";
 // This interface is reserved for future user preferences (theme, etc.).
 export interface ArborSettings {
   arborSchemaVersion: number;
+  lastRoot?: string;
+  lastFolder?: string;
+  lastTheme?: ThemeKey;
+  lastLayout?: LayoutMode;
+  coloredEdges?: boolean;
+  siblingsBloodOnly?: boolean;
   [key: string]: unknown;
 }

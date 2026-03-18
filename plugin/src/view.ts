@@ -42,6 +42,13 @@ export class FamilyTreeView extends ItemView {
   getIcon(): string { return "trees"; }
 
   async onOpen(): Promise<void> {
+    // Restore persisted toggle states.
+    const s = this.plugin.settings;
+    if (s.lastTheme)                    this.currentTheme      = s.lastTheme;
+    if (s.lastLayout)                   this.currentLayout     = s.lastLayout;
+    if (s.coloredEdges      !== undefined) this.coloredEdges      = s.coloredEdges;
+    if (s.siblingsBloodOnly !== undefined) this.siblingsBloodOnly = s.siblingsBloodOnly;
+
     // Respond to file-open events while the view is open.
     this.registerEvent(
       this.app.workspace.on("file-open", (file) => this.onFileOpen(file))
@@ -79,6 +86,11 @@ export class FamilyTreeView extends ItemView {
     const file = this.app.workspace.getActiveFile();
     if (file && this.isPersonFile(file)) {
       this.loadFromFile(file);
+    } else if (this.plugin.settings.lastRoot && this.plugin.settings.lastFolder) {
+      this.currentFolder = this.plugin.settings.lastFolder;
+      this.homeRoot      = this.plugin.settings.lastRoot;
+      this.loadData();
+      this.render(this.plugin.settings.lastRoot);
     } else {
       this.showNoPersonMessage();
     }
@@ -121,6 +133,16 @@ export class FamilyTreeView extends ItemView {
 
   private render(rootName: string): void {
     this.currentRoot = rootName;
+
+    const s = this.plugin.settings;
+    s.lastRoot          = this.currentRoot;
+    s.lastFolder        = this.currentFolder;
+    s.lastTheme         = this.currentTheme;
+    s.lastLayout        = this.currentLayout;
+    s.coloredEdges      = this.coloredEdges;
+    s.siblingsBloodOnly = this.siblingsBloodOnly;
+    this.plugin.saveSettings();
+
     const t = THEMES[this.currentTheme];
 
     this.contentEl.empty();
