@@ -61,8 +61,11 @@ export function buildSVG(
   let edgeSVG = "";
   let cardSVG = "";
 
-  // Pass 1: canonicalise and deduplicate edges, group by (ancestor, sibling flag)
-  type CanonEdge = { ancId: string; chId: string; toName: string; sibling: boolean };
+  // Pass 1: canonicalise and deduplicate edges, group by (ancestor, fromName, sibling flag).
+  // fromName identifies the specific card within the ancestor unit to exit from, so that
+  // children of different spouses get distinct exit points rather than all exiting from
+  // the unit centre (important when one person has children by multiple partners).
+  type CanonEdge = { ancId: string; chId: string; fromName: string | undefined; toName: string; sibling: boolean };
   const edgeSeen = new Set<string>();
   const ancGroups = new Map<string, CanonEdge[]>();
 
@@ -73,25 +76,33 @@ export function buildSVG(
 
     const ancId = fromU.gen <= toU.gen ? e.fromUnit : e.toUnit;
     const chId  = ancId === e.fromUnit ? e.toUnit   : e.fromUnit;
+    // fromName only applies when fromUnit is the ancestor
+    const fromName = ancId === e.fromUnit ? e.fromName : undefined;
 
     const key = `${ancId}|${chId}`;
     if (edgeSeen.has(key)) continue;
     edgeSeen.add(key);
 
-    const groupKey = `${ancId}::${e.sibling}`;
+    // Group by ancestor + specific exit card + sibling flag so each distinct
+    // parent card within a multi-spouse unit forms its own fan of edges.
+    const groupKey = `${ancId}::${fromName ?? ""}::${e.sibling}`;
     if (!ancGroups.has(groupKey)) ancGroups.set(groupKey, []);
-    ancGroups.get(groupKey)!.push({ ancId, chId, toName: e.toName, sibling: e.sibling });
+    ancGroups.get(groupKey)!.push({ ancId, chId, fromName, toName: e.toName, sibling: e.sibling });
   }
 
   // Pass 2: emit one Bézier per edge, exit points spread across parent card edge
   for (const group of ancGroups.values()) {
-    const { ancId, sibling } = group[0];
+    const { ancId, fromName, sibling } = group[0];
     const ancU = units[ancId];
     const col  = sibling ? theme.edgeSib : theme.edge;
     const dash = sibling ? " stroke-dasharray='5,3'" : "";
 
     if (layoutMode === "horizontal") {
-      const px = ancU.x! + (ancU.width ?? CARD_W) / 2 + ox;
+      // Compute exit X from the specific fromName card (or unit centre if unset)
+      const fromIdx = fromName ? ancU.members.indexOf(fromName) : -1;
+      const px = fromIdx >= 0
+        ? ancU.x! + fromIdx * (CARD_W + SPOUSE_GAP) + CARD_W / 2 + ox
+        : ancU.x! + (ancU.width ?? CARD_W) / 2 + ox;
       const py = ancU.y! + CARD_H + oy;
 
       const withPos = group.map(ce => {
@@ -110,8 +121,12 @@ export function buildSVG(
       });
 
     } else {
+      // Compute exit Y from the specific fromName card (or unit centre if unset)
+      const fromIdx = fromName ? ancU.members.indexOf(fromName) : -1;
       const px = ancU.x! + (ancU.width ?? 0) + ox;
-      const py = ancU.y! + (ancU.height ?? CARD_H) / 2 + oy;
+      const py = fromIdx >= 0
+        ? ancU.y! + fromIdx * (CARD_H + SPOUSE_GAP) + CARD_H / 2 + oy
+        : ancU.y! + (ancU.height ?? CARD_H) / 2 + oy;
 
       const withPos = group.map(ce => {
         const chU   = units[ce.chId];

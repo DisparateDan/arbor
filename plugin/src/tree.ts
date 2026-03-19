@@ -166,7 +166,18 @@ export function buildTree(
       const childUid  = people[cName]?.unitId;
       if (parentUid && childUid && parentUid !== childUid) {
         if (!edges.some(e => e.fromUnit === parentUid && e.toUnit === childUid)) {
-          edges.push({ fromUnit: parentUid, toUnit: childUid, toName: cName, sibling: false });
+          // When the parent unit contains multiple spouses, anchor to the specific
+          // other parent of this child (e.g. the mother when Henry VIII is `name`),
+          // so the edge exits from that spouse's card rather than the unit centre.
+          const cPage = byName[cName];
+          const cFather = cPage ? resolveName(cPage.father) : null;
+          const cMother = cPage ? resolveName(cPage.mother) : null;
+          const otherParent = name === cFather ? cMother : cFather;
+          const parentUnit = units[parentUid];
+          const fromName = (otherParent && parentUnit.members.includes(otherParent))
+            ? otherParent
+            : name;
+          edges.push({ fromUnit: parentUid, toUnit: childUid, fromName, toName: cName, sibling: false });
         }
       }
     }

@@ -41,6 +41,7 @@ export interface Unit {
 export interface Edge {
   fromUnit: string;
   toUnit: string;
+  fromName?: string; // specific member of fromUnit to anchor the edge exit to
   toName: string;
   sibling: boolean;
 }
