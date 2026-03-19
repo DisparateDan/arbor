@@ -30,7 +30,8 @@ arbor/
         └── commands/
             ├── newPerson.ts           ← "Create Person Note" command
             ├── bulkImport.ts          ← "Import People from CSV" command
-            └── exportHtml.ts          ← "Export Tree as HTML" command
+            ├── exportHtml.ts          ← "Export Tree as HTML" command
+            └── exportGedcom.ts        ← "Export Tree as GEDCOM" command
 ```
 
 ## Vault Structure

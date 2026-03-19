@@ -44,19 +44,3 @@ export function buildGenderIndex(byName: Record<string, PersonPage>): GenderInde
   return gender;
 }
 
-/** Resolve a display name (or prefix) to a file stem. */
-export function stemFor(
-  display: string,
-  nameIndex: NameIndex,
-  byName: Record<string, PersonPage>,
-): string {
-  if (nameIndex.displayToStem[display]) return nameIndex.displayToStem[display];
-  const lower = display.toLowerCase();
-  for (const [disp, stem] of Object.entries(nameIndex.displayToStem)) {
-    if (disp.toLowerCase().startsWith(lower)) return stem;
-  }
-  for (const stem of Object.keys(byName)) {
-    if (stem.toLowerCase().startsWith(lower)) return stem;
-  }
-  return display; // last resort — will fail gracefully
-}
