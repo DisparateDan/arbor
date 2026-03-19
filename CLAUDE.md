@@ -33,17 +33,12 @@ arbor/
             └── exportHtml.ts          ← "Export Tree as HTML" command
 ```
 
-**Schema reference:**
-- `obsidian/arbor_family_member_template.md` — blank person note template (reference only)
-
----
-
 ## Vault Structure
 
-- **Vault root:** `~/Obsidian/PersonalDB`
-- **People folder:** `FamilyTree/People`
-- Each person is a single `.md` file whose filename stem is the person's full name plus a 4-character random suffix, e.g. `Daniel Pusceddu_alek.md`
-- The root/home person is **Daniel Pusceddu** (`Daniel Pusceddu_alek.md`)
+- A root folder is required, eg <vault_root>/FamilyTree
+- Multiple root folders and family trees are supported in a vault
+- Person notes can be arbitrarily nested within the root, eg FamilyTree/People and FamilyTree/MorePeople. Arbor will flatten the list.
+- Each person is a single `.md` file whose filename stem is the person's full name plus a 4-character random suffix, e.g. `John Williams_alek.md`
 
 ---
 
@@ -115,7 +110,6 @@ Theme keys: `containerBorder`, `edge`, `edgeSib`, `spouseLine`, `rootBorder`, `t
 
 ## Known Issues / Deferred Work
 
-- **Intermingled siblings at gen 2+ ("show all siblings" mode):** When `siblingsBloodOnly = false`, siblings of married-in spouses can intermingle with blood-line children in some cases. Root cause is in `buildTree`/`addDescendants`. Deferred — the blood-siblings-only mode works correctly.
 - **GEDCOM exporter** has not been tested with applications other than Gramps.
 
 ## Planned Features
@@ -131,5 +125,5 @@ _(none at this time)_
 - `resolveOverlaps` / `resolveOverlapsV` must sort by parent-centre first — this is a hard-won fix, do not revert it
 - Prefer systematic logging to diagnose bugs before attempting fixes
 - One bug at a time; clean revert if a fix causes regression rather than patching forward
-- The `ar_type: person` filter is the sole loading criterion — do not add or change filter fields without updating all plugin modules and `export_gedcom.py`
+- The `ar_type: person` filter is the sole loading criterion — do not add or change filter fields without updating all plugin modules
 - Obsidian command `name` fields should NOT include the plugin name prefix — Obsidian prepends "Arbor Family Tree:" automatically in the command palette
