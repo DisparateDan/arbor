@@ -174,9 +174,12 @@ export function buildTree(
           const cMother = cPage ? resolveName(cPage.mother) : null;
           const otherParent = name === cFather ? cMother : cFather;
           const parentUnit = units[parentUid];
-          const fromName = (otherParent && parentUnit.members.includes(otherParent))
+          // Only anchor to a specific card when the unit has 3+ members (multiple
+          // spouses in one unit). For a normal 2-person couple the edge should
+          // exit from the unit midpoint, so leave fromName undefined.
+          const fromName = (parentUnit.members.length > 2 && otherParent && parentUnit.members.includes(otherParent))
             ? otherParent
-            : name;
+            : parentUnit.members.length > 2 ? name : undefined;
           edges.push({ fromUnit: parentUid, toUnit: childUid, fromName, toName: cName, sibling: false });
         }
       }
