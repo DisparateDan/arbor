@@ -6,5 +6,6 @@
   "description": "Visualise and navigate a family tree built from person notes in your vault.",
   "author": "Dan Pusceddu",
   "authorUrl": "https://github.com/DisparateDan",
-  "isDesktopOnly": false
+  "isDesktopOnly": false,
+  "fundingUrl": "https://buymeacoffee.com/disparatedan"
 }
