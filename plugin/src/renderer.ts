@@ -112,9 +112,8 @@ export function buildSVG(
         return { ...ce, cx: chU.x! + toOff + CARD_W / 2 + ox, cy: chU.y! + oy };
       }).sort((a, b) => a.cx - b.cx);
 
-      const n = withPos.length;
       withPos.forEach(({ cx, cy }, i) => {
-        const edgeCol = (coloredEdges && n > 1) ? theme.edgePalette[i % theme.edgePalette.length] : col;
+        const edgeCol = coloredEdges ? theme.edgePalette[i % theme.edgePalette.length] : col;
         const dy = cy - py;
         const d = `M${px},${py} C${px},${py + dy * 0.5} ${cx},${cy - dy * 0.5} ${cx},${cy}`;
         edgeSVG += `<path d='${d}' fill='none' stroke='${edgeCol}' stroke-width='1.5'${dash}/>`;
@@ -135,9 +134,8 @@ export function buildSVG(
         return { ...ce, cx: chU.x! + ox, cy: chU.y! + toOff + CARD_H / 2 + oy };
       }).sort((a, b) => a.cy - b.cy);
 
-      const n = withPos.length;
       withPos.forEach(({ cx, cy }, i) => {
-        const edgeCol = (coloredEdges && n > 1) ? theme.edgePalette[i % theme.edgePalette.length] : col;
+        const edgeCol = coloredEdges ? theme.edgePalette[i % theme.edgePalette.length] : col;
         const dx = cx - px;
         const d = `M${px},${py} C${px + dx * 0.5},${py} ${cx - dx * 0.5},${cy} ${cx},${cy}`;
         edgeSVG += `<path d='${d}' fill='none' stroke='${edgeCol}' stroke-width='1.5'${dash}/>`;
