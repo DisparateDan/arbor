@@ -1,6 +1,7 @@
 import { App, FuzzySuggestModal, Modal, Notice, Setting, TFile } from "obsidian";
 import type ArborPlugin from "../main";
 import { resolveTargetFolder, uniqueSuffix } from "./newPerson";
+import { parseCSV } from "../csvUtils";
 
 // ── CSV template ──────────────────────────────────────────────────────────────
 
@@ -24,43 +25,11 @@ async function saveTemplate(app: App): Promise<void> {
 }
 
 // ── CSV parsing ───────────────────────────────────────────────────────────────
-
-function splitCSVLine(line: string): string[] {
-  const result: string[] = [];
-  let current = "";
-  let inQuotes = false;
-  for (let i = 0; i < line.length; i++) {
-    const ch = line[i];
-    if (ch === '"') {
-      if (inQuotes && line[i + 1] === '"') { current += '"'; i++; }
-      else inQuotes = !inQuotes;
-    } else if (ch === "," && !inQuotes) {
-      result.push(current);
-      current = "";
-    } else {
-      current += ch;
-    }
-  }
-  result.push(current);
-  return result;
-}
-
-function parseCSV(text: string): Record<string, string>[] {
-  const lines = text.replace(/\r\n/g, "\n").replace(/\r/g, "\n")
-    .split("\n").filter(l => l.trim());
-  if (lines.length < 2) return [];
-  const headers = splitCSVLine(lines[0]).map(h => h.trim());
-  return lines.slice(1).map(line => {
-    const values = splitCSVLine(line);
-    const row: Record<string, string> = {};
-    headers.forEach((h, i) => { row[h] = (values[i] ?? "").trim(); });
-    return row;
-  });
-}
+// splitCsvRow, parseCSV imported from ../csvUtils
 
 function splitList(value: string): string[] {
   if (!value) return [];
-  return value.split(/[;|]/).map(v => v.trim()).filter(Boolean);
+  return value.split('|').map(v => v.trim()).filter(Boolean);
 }
 
 // ── Note rendering ────────────────────────────────────────────────────────────

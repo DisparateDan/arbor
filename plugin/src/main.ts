@@ -6,6 +6,7 @@ import { registerNewPersonCommand } from "./commands/newPerson";
 import { registerBulkImportCommand } from "./commands/bulkImport";
 import { registerExportHtmlCommand } from "./commands/exportHtml";
 import { registerExportGedcomCommand } from "./commands/exportGedcom";
+import { registerExportCsvCommand } from "./commands/exportCsv";
 
 export default class ArborPlugin extends Plugin {
   settings: ArborSettings = { ...DEFAULT_SETTINGS };
@@ -33,6 +34,7 @@ export default class ArborPlugin extends Plugin {
     registerBulkImportCommand(this);
     registerExportHtmlCommand(this);
     registerExportGedcomCommand(this);
+    registerExportCsvCommand(this);
   }
 
   onunload(): void {
