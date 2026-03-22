@@ -25,6 +25,14 @@ Arbor grew out of a personal project to easily visualise my own family history. 
 
 ---
 
+## Known limitations
+
+- **Pedigree collapse is not supported.** If a person appears in two separate lines of descent from the root — for example, because cousins married, or because a common ancestor appears on both sides of the family — one of the connecting relationships will not be drawn. This affects closely-knit historical families, noble lineages where cousin marriage was common, and mythological or legendary genealogies. Viewing the tree from a different root person (one who sits on only one of the two paths) will usually give a cleaner result. When pedigree collapse is detected, the **Show All Siblings** toolbar button is automatically disabled — hovering over it will show a tooltip explaining why.
+- The **show all siblings** mode can produce overlapping cards in some multi-generation configurations. Blood-siblings-only mode works correctly in all cases.
+- GEDCOM export has been tested with Gramps only.
+
+---
+
 ## Installation
 
 ### From the Obsidian community plugin browser (recommended)
@@ -125,14 +133,6 @@ Run **Arbor Family Tree: Export Tree as HTML** to generate a standalone HTML fil
 ### GEDCOM export
 
 Run **Arbor Family Tree: Export Tree as GEDCOM** to generate a GEDCOM 5.5.1 `.ged` file, compatible with genealogy applications such as Gramps. The exporter covers individuals, birth/death dates and places, and family units derived from parent and spouse fields.
-
----
-
-## Known limitations
-
-- **Pedigree collapse is not supported.** If a person appears in two separate lines of descent from the root — for example, because cousins married, or because a common ancestor appears on both sides of the family — one of the connecting relationships will not be drawn. This affects closely-knit historical families, noble lineages where cousin marriage was common, and mythological or legendary genealogies. Viewing the tree from a different root person (one who sits on only one of the two paths) will usually give a cleaner result.
-- The "show all siblings" mode can produce overlapping cards in some multi-generation configurations. Blood-siblings-only mode works correctly in all cases.
-- GEDCOM export has been tested with Gramps only.
 
 ---
 
