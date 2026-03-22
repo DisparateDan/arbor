@@ -152,7 +152,8 @@ export class FamilyTreeView extends ItemView {
       attr: { style: `border:1px solid ${t.containerBorder}; border-radius:8px; overflow:hidden;` }
     });
 
-    const { units, people, edges } = buildTree(rootName, this.byName, this.siblingsBloodOnly);
+    const { units, people, edges, pedigreeCollapse } = buildTree(rootName, this.byName, this.siblingsBloodOnly);
+    const effectiveSiblingsBloodOnly = pedigreeCollapse ? true : this.siblingsBloodOnly;
 
     // ── Toolbar ──────────────────────────────────────────────────────────────
     const btnStyle =
@@ -197,13 +198,20 @@ export class FamilyTreeView extends ItemView {
     });
 
     const sibBtn = toolbar.createEl("button", {
-      text: this.siblingsBloodOnly ? "Show All Siblings" : "Blood Siblings Only",
-      attr: { style: btnStyle }
+      text: pedigreeCollapse
+        ? "Blood Siblings Only"
+        : effectiveSiblingsBloodOnly ? "Show All Siblings" : "Blood Siblings Only",
+      attr: {
+        style: btnStyle + (pedigreeCollapse ? " opacity:0.4; cursor:not-allowed;" : ""),
+        title: pedigreeCollapse ? "Show all siblings is unavailable — this tree contains pedigree collapse" : "",
+      }
     });
-    sibBtn.addEventListener("click", () => {
-      this.siblingsBloodOnly = !this.siblingsBloodOnly;
-      this.render(this.currentRoot);
-    });
+    if (!pedigreeCollapse) {
+      sibBtn.addEventListener("click", () => {
+        this.siblingsBloodOnly = !this.siblingsBloodOnly;
+        this.render(this.currentRoot);
+      });
+    }
 
     toolbar.createEl("span", {
       attr: { style: `width:1px; height:18px; background:${t.toolbarBorder}; flex-shrink:0;` }

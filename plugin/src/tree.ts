@@ -80,16 +80,13 @@ export function buildTree(
   const visited = new Set<string>();
   const bloodLine = new Set<string>();
   let uc = 0;
+  let pedigreeCollapse = false;
 
   function newUnit(members: string[], gen: number, dir: Unit["dir"]): string {
     const id = "u" + uc++;
-    // Filter out members already placed in another unit. This prevents duplicate
-    // cards when pedigree collapse or in-law parent/child pairs cause the same
-    // person to be encountered via two different traversal paths.
-    const freshMembers = members.filter(m => !people[m]);
-    units[id] = { id, members: freshMembers, gen, dir };
-    for (const name of freshMembers) {
-      people[name] = { name, page: byName[name] ?? null, unitId: id };
+    units[id] = { id, members, gen, dir };
+    for (const name of members) {
+      if (!people[name]) people[name] = { name, page: byName[name] ?? null, unitId: id };
     }
     return id;
   }
@@ -176,6 +173,7 @@ export function buildTree(
         // relationship visually.
         const parentGen = units[parentUid].gen;
         const childGen  = units[childUid].gen;
+        if (childGen <= parentGen) pedigreeCollapse = true;
         if (childGen > parentGen && !edges.some(e => e.fromUnit === parentUid && e.toUnit === childUid)) {
           // When the parent unit contains multiple spouses, anchor to the specific
           // other parent of this child (e.g. the mother when Henry VIII is `name`),
@@ -216,5 +214,5 @@ export function buildTree(
     }
   }
 
-  return { units, people, edges, bloodLine };
+  return { units, people, edges, bloodLine, pedigreeCollapse };
 }

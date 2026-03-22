@@ -57,6 +57,7 @@ export interface TreeResult {
   people: Record<string, PersonEntry>;
   edges: Edge[];
   bloodLine: Set<string>;
+  pedigreeCollapse: boolean;
 }
 
 // ── Index types ─────────────────────────────────────────────────────────
