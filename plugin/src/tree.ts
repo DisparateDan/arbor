@@ -83,9 +83,13 @@ export function buildTree(
 
   function newUnit(members: string[], gen: number, dir: Unit["dir"]): string {
     const id = "u" + uc++;
-    units[id] = { id, members, gen, dir };
-    for (const name of members) {
-      if (!people[name]) people[name] = { name, page: byName[name] ?? null, unitId: id };
+    // Filter out members already placed in another unit. This prevents duplicate
+    // cards when pedigree collapse or in-law parent/child pairs cause the same
+    // person to be encountered via two different traversal paths.
+    const freshMembers = members.filter(m => !people[m]);
+    units[id] = { id, members: freshMembers, gen, dir };
+    for (const name of freshMembers) {
+      people[name] = { name, page: byName[name] ?? null, unitId: id };
     }
     return id;
   }
@@ -165,7 +169,14 @@ export function buildTree(
       const parentUid = people[name]?.unitId;
       const childUid  = people[cName]?.unitId;
       if (parentUid && childUid && parentUid !== childUid) {
-        if (!edges.some(e => e.fromUnit === parentUid && e.toUnit === childUid)) {
+        // Skip if the child is already placed at or above the parent's generation.
+        // This happens when a person is first discovered as a spouse-of-descendant
+        // (assigned an earlier gen) and later re-encountered as a blood descendant
+        // of a different branch — adding the edge would invert the parent/child
+        // relationship visually.
+        const parentGen = units[parentUid].gen;
+        const childGen  = units[childUid].gen;
+        if (childGen > parentGen && !edges.some(e => e.fromUnit === parentUid && e.toUnit === childUid)) {
           // When the parent unit contains multiple spouses, anchor to the specific
           // other parent of this child (e.g. the mother when Henry VIII is `name`),
           // so the edge exits from that spouse's card rather than the unit centre.
