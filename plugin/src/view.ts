@@ -198,9 +198,7 @@ export class FamilyTreeView extends ItemView {
     });
 
     const sibBtn = toolbar.createEl("button", {
-      text: pedigreeCollapse
-        ? "Blood Siblings Only"
-        : effectiveSiblingsBloodOnly ? "Show All Siblings" : "Blood Siblings Only",
+      text: effectiveSiblingsBloodOnly ? "Show All Siblings" : "Blood Siblings Only",
       attr: {
         style: btnStyle + (pedigreeCollapse ? " opacity:0.4; cursor:not-allowed;" : ""),
         title: pedigreeCollapse ? "Show all siblings is unavailable — this tree contains pedigree collapse" : "",

@@ -228,4 +228,66 @@ describe("buildTree", () => {
     const rootUnit = Object.values(units).find(u => u.dir === "root");
     expect(rootUnit!.members).toContain("Spouse_bb22");
   });
+
+  it("assigns gen 0 to root, -1 to parents, +1 to children", () => {
+    const byName = {
+      "Grandparent_aa11": person({ first_names: "Grand" }),
+      "Root_bb22": person({ first_names: "Root", father: "[[Grandparent_aa11]]" }),
+      "Child_cc33": person({ first_names: "Child", father: "[[Root_bb22]]" }),
+    };
+    const { units, people } = buildTree("Root_bb22", byName, true);
+    expect(units[people["Root_bb22"].unitId].gen).toBe(0);
+    expect(units[people["Grandparent_aa11"].unitId].gen).toBe(-1);
+    expect(units[people["Child_cc33"].unitId].gen).toBe(1);
+  });
+
+  it("does not set fromName on edges from a 2-member parent unit", () => {
+    const byName = {
+      "Father_aa11": person({ first_names: "Father", sex: "male",   married: ["[[Mother_bb22]]"] }),
+      "Mother_bb22": person({ first_names: "Mother", sex: "female", married: ["[[Father_aa11]]"] }),
+      "Child_cc33":  person({ first_names: "Child",  father: "[[Father_aa11]]", mother: "[[Mother_bb22]]" }),
+    };
+    const { edges, people, units } = buildTree("Father_aa11", byName, true);
+    const parentUid = people["Father_aa11"].unitId;
+    expect(units[parentUid].members.length).toBe(2);
+    const childEdges = edges.filter(e => e.fromUnit === parentUid);
+    childEdges.forEach(e => expect(e.fromName).toBeUndefined());
+  });
+
+  it("sets fromName on edges from a 3-member parent unit (multiple spouses)", () => {
+    const byName = {
+      "Root_aa11": person({ first_names: "Root", married: ["[[Wife1_bb22]]", "[[Wife2_cc33]]"] }),
+      "Wife1_bb22": person({ first_names: "Wife1", married: ["[[Root_aa11]]"] }),
+      "Wife2_cc33": person({ first_names: "Wife2", married: ["[[Root_aa11]]"] }),
+      "Child1_dd44": person({ first_names: "Child1", father: "[[Root_aa11]]", mother: "[[Wife1_bb22]]" }),
+      "Child2_ee55": person({ first_names: "Child2", father: "[[Root_aa11]]", mother: "[[Wife2_cc33]]" }),
+    };
+    const { edges, people, units } = buildTree("Root_aa11", byName, true);
+    const parentUid = people["Root_aa11"].unitId;
+    expect(units[parentUid].members.length).toBe(3);
+    const childEdges = edges.filter(e => e.fromUnit === parentUid);
+    childEdges.forEach(e => expect(e.fromName).toBeDefined());
+  });
+
+  it("detects pedigree collapse when a person is placed at a lower gen than their parent", () => {
+    // Spouse_s is placed at gen 0 (as Root_r's wife) but is also a child of Child_a (gen 1).
+    // When addDescendants reaches Child_a → Spouse_s, childGen (0) <= parentGen (1) → collapse.
+    const byName = {
+      "Root_r":   person({ first_names: "Root",   married: ["[[Spouse_s]]"] }),
+      "Spouse_s": person({ first_names: "Spouse", married: ["[[Root_r]]"],   father: "[[Child_a]]" }),
+      "Child_a":  person({ first_names: "Child",                             father: "[[Root_r]]" }),
+    };
+    const { pedigreeCollapse } = buildTree("Root_r", byName, true);
+    expect(pedigreeCollapse).toBe(true);
+  });
+
+  it("reports no pedigree collapse for a clean 3-generation tree", () => {
+    const byName = {
+      "Grandparent_aa11": person({ first_names: "Grand" }),
+      "Parent_bb22":      person({ first_names: "Parent", father: "[[Grandparent_aa11]]" }),
+      "Child_cc33":       person({ first_names: "Child",  father: "[[Parent_bb22]]" }),
+    };
+    const { pedigreeCollapse } = buildTree("Grandparent_aa11", byName, true);
+    expect(pedigreeCollapse).toBe(false);
+  });
 });
