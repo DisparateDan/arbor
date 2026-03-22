@@ -181,8 +181,8 @@ class NewPersonModal extends Modal {
   }
 
   private submit(): void {
-    if (!this.first || !this.family) {
-      new Notice("Arbor: both first name(s) and family name are required.");
+    if (!this.first && !this.family) {
+      new Notice("Arbor: please enter at least a first name or family name.");
       return;
     }
     this.onSubmit(this.first, this.family);

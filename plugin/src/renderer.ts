@@ -178,19 +178,13 @@ export function buildSVG(
         }
       }
 
-      const firstIsUnknown = !first || first.toLowerCase() === "unknown";
-      const lastIsUnknown  = !last  || last.toLowerCase()  === "unknown";
-      const firstTxt  = firstIsUnknown ? "UNKNOWN" : escapeHtml(trunc(first));
-      const lastTxt   = lastIsUnknown  ? "UNKNOWN" : escapeHtml(trunc(last));
-      const firstCol  = firstIsUnknown ? theme.dates : textCol;
-      const lastCol   = lastIsUnknown  ? theme.dates : textCol;
-      const firstSize = firstIsUnknown ? "10" : "14";
-      const lastSize  = lastIsUnknown  ? "10" : "14";
+      const firstTxt = escapeHtml(trunc(first));
+      const lastTxt  = escapeHtml(trunc(last));
 
       cardSVG += `<g class='person-card' data-name='${escapeHtml(name)}' style='cursor:pointer'>`;
       cardSVG += `<rect x='${cx}' y='${cy}' width='${CARD_W}' height='${CARD_H}' rx='6' fill='${fill}' stroke='${border}' stroke-width='${sw}'/>`;
-      cardSVG += `<text x='${mid}' y='${cy + 16}' text-anchor='middle' font-size='${firstSize}' font-weight='${fw}' fill='${firstCol}' font-family='var(--font-interface)'>${firstTxt}</text>`;
-      cardSVG += `<text x='${mid}' y='${cy + 29}' text-anchor='middle' font-size='${lastSize}'  font-weight='${fw}' fill='${lastCol}'  font-family='var(--font-interface)'>${lastTxt}</text>`;
+      cardSVG += `<text x='${mid}' y='${cy + 16}' text-anchor='middle' font-size='14' font-weight='${fw}' fill='${textCol}' font-family='var(--font-interface)'>${firstTxt}</text>`;
+      cardSVG += `<text x='${mid}' y='${cy + 29}' text-anchor='middle' font-size='14' font-weight='${fw}' fill='${textCol}' font-family='var(--font-interface)'>${lastTxt}</text>`;
       cardSVG += `<text x='${mid}' y='${cy + 48}' text-anchor='middle' font-size='11' fill='${datesCol}' font-family='var(--font-interface)'>${dates}</text>`;
       cardSVG += `</g>`;
     });
