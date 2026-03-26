@@ -58,7 +58,10 @@ export function layout(
       if (u.dir === "sibling") return subtreeHeightCache[uid] = unitH(u);
       if (isLeafV(uid))        return subtreeHeightCache[uid] = 0;
       const ch = (childrenOf[uid] || []).filter(cid => !isLeafV(cid))
-                  .sort((a, b) => unitDobV(units[a]) - unitDobV(units[b]));
+                  .sort((a, b) => {
+                    const d = unitDobV(units[a]) - unitDobV(units[b]);
+                    return isNaN(d) ? 0 : d;
+                  });
       if (ch.length === 0) return subtreeHeightCache[uid] = unitH(u);
       let h = ch.reduce((sum, cid) => sum + subtreeHeight(cid), 0) + (ch.length - 1) * H_GAP;
       h = Math.max(h, unitH(u));
@@ -93,7 +96,10 @@ export function layout(
           }
           return cu.dir !== "anc";
         })
-        .sort((a, b) => unitDobV(units[a]) - unitDobV(units[b]));
+        .sort((a, b) => {
+          const d = unitDobV(units[a]) - unitDobV(units[b]);
+          return isNaN(d) ? 0 : d;
+        });
       if (eligible.length === 0) return;
 
       const totalSpan = eligible.reduce((sum, cid) =>
@@ -192,13 +198,13 @@ export function layout(
         }
         const sibCh = (childrenOf[id] || [])
           .filter(cid => units[cid] && units[cid].dir === "sibling" && units[cid].y === undefined)
-          .sort((a, b) => unitDobV(units[a]) - unitDobV(units[b]));
+          .sort((a, b) => { const d = unitDobV(units[a]) - unitDobV(units[b]); return isNaN(d) ? 0 : d; });
         if (sibCh.length > 0) {
           const bloodCh = (childrenOf[id] || [])
             .filter(cid => units[cid] && units[cid].dir !== "sibling" && units[cid].y !== undefined)
-            .sort((a, b) => unitDobV(units[a]) - unitDobV(units[b]));
+            .sort((a, b) => { const d = unitDobV(units[a]) - unitDobV(units[b]); return isNaN(d) ? 0 : d; });
           const allCh = [...bloodCh, ...sibCh]
-            .sort((a, b) => unitDobV(units[a]) - unitDobV(units[b]));
+            .sort((a, b) => { const d = unitDobV(units[a]) - unitDobV(units[b]); return isNaN(d) ? 0 : d; });
           const totalH = allCh.reduce((s, cid) => s + unitH(units[cid]), 0) + (allCh.length - 1) * H_GAP;
           const ancCentreY = u.y + unitH(u) / 2;
           let y = ancCentreY - totalH / 2;
@@ -302,7 +308,10 @@ export function layout(
         if (!cu || cu.dir === "anc") return false;
         return true;
       })
-      .sort((a, b) => unitDob(units[a]) - unitDob(units[b]));
+      .sort((a, b) => {
+        const d = unitDob(units[a]) - unitDob(units[b]);
+        return isNaN(d) ? 0 : d;
+      });
     if (eligible.length === 0) return;
 
     const totalSpan = eligible.reduce((sum, cid) =>
@@ -402,9 +411,10 @@ export function layout(
       }
       const unplacedSibs = (childrenOf[id] || [])
         .filter(cid => units[cid] && units[cid].dir === "sibling" && units[cid].x === undefined)
-        .sort((a, b) => unitDob(units[a]) - unitDob(units[b]));
+        .sort((a, b) => { const d = unitDob(units[a]) - unitDob(units[b]); return isNaN(d) ? 0 : d; });
       if (unplacedSibs.length > 0) {
-        const allCh = (childrenOf[id] || []).sort((a, b) => unitDob(units[a]) - unitDob(units[b]));
+        const allCh = (childrenOf[id] || [])
+          .sort((a, b) => { const d = unitDob(units[a]) - unitDob(units[b]); return isNaN(d) ? 0 : d; });
         const totalW = allCh.reduce((s, cid) => s + unitW(units[cid]), 0) + (allCh.length - 1) * H_GAP;
         const ancCentreX = u.x + unitW(u) / 2;
         let cx = ancCentreX - totalW / 2;

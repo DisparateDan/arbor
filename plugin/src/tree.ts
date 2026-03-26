@@ -118,7 +118,10 @@ export function buildTree(
         for (const parentName of [fName, mName].filter((x): x is string => x !== null)) {
           for (const cName of findChildren(parentName, byName)) sibSet.add(cName);
         }
-        const allSibs = [...sibSet].sort((a, b) => dobYear(a) - dobYear(b));
+        const allSibs = [...sibSet].sort((a, b) => {
+          const d = dobYear(a) - dobYear(b);
+          return isNaN(d) ? 0 : d;
+        });
 
         for (const sibName of allSibs) {
           const isBloodLine = sibName === name;
