@@ -1,0 +1,119 @@
+/* ── Arbor view chrome ──────────────────────────────────────────────────── */
+
+.arbor-outer {
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 8px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.arbor-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 12px;
+  background: var(--background-secondary);
+  border-bottom: 1px solid var(--background-modifier-border);
+  overflow-x: auto;
+  flex-shrink: 0;
+}
+
+.arbor-title {
+  font-size: 13px;
+  color: var(--text-normal);
+  flex-shrink: 0;
+}
+
+.arbor-root-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-accent);
+  margin-right: auto;
+  flex-shrink: 0;
+}
+
+.arbor-divider {
+  width: 1px;
+  height: 18px;
+  background: var(--background-modifier-border);
+  flex-shrink: 0;
+}
+
+.arbor-btn {
+  background: var(--interactive-normal);
+  border: 1px solid var(--background-modifier-border);
+  color: var(--text-normal);
+  padding: 3px 10px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 12px;
+  flex-shrink: 0;
+  font-family: inherit;
+}
+
+.arbor-btn:hover {
+  background: var(--interactive-hover);
+}
+
+.arbor-btn.is-disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+.arbor-version {
+  font-size: 11px;
+  color: var(--text-faint);
+  flex-shrink: 0;
+}
+
+.arbor-body {
+  flex: 1;
+  overflow: auto;
+  max-height: 80vh;
+  background: var(--background-primary);
+}
+
+/* ── Arbor SVG colour tokens ────────────────────────────────────────────── */
+/* Read at render time via getComputedStyle to build the Theme for buildSVG.  */
+/* Genealogy-specific colours that have no Obsidian equivalent.              */
+
+.theme-dark {
+  --arbor-edge:            #6a8aaa;
+  --arbor-edge-sib:        #3a5a6a;
+  --arbor-edge-0:          #6a8aaa;
+  --arbor-edge-1:          #b06878;
+  --arbor-edge-2:          #6a9870;
+  --arbor-edge-3:          #b09040;
+  --arbor-edge-4:          #7868b0;
+  --arbor-spouse-line:     #88aacc;
+  --arbor-text-root:       #ffffff;
+  --arbor-male-fill:       #0a2a4a;
+  --arbor-male-border:     #2a8acc;
+  --arbor-female-fill:     #3a0a2a;
+  --arbor-female-border:   #cc2a7a;
+  --arbor-unknown-fill:    #1a2030;
+  --arbor-unknown-border:  #6a8a9a;
+  --arbor-sib-fill:        #0a1018;
+  --arbor-sib-border:      #3a5a6a;
+}
+
+.theme-light {
+  --arbor-edge:            #5a4a3a;
+  --arbor-edge-sib:        #8a7a6a;
+  --arbor-edge-0:          #5a4a3a;
+  --arbor-edge-1:          #9a3040;
+  --arbor-edge-2:          #2a6a3a;
+  --arbor-edge-3:          #8a6010;
+  --arbor-edge-4:          #3a3a8a;
+  --arbor-spouse-line:     #4a6a8a;
+  --arbor-text-root:       #ffffff;
+  --arbor-male-fill:       #a0cce8;
+  --arbor-male-border:     #0a4a7a;
+  --arbor-female-fill:     #e8a0c0;
+  --arbor-female-border:   #7a0a3a;
+  --arbor-unknown-fill:    #d8d0c0;
+  --arbor-unknown-border:  #5a4a3a;
+  --arbor-sib-fill:        #c8c0b0;
+  --arbor-sib-border:      #7a6a5a;
+}

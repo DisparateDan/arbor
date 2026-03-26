@@ -1,13 +1,13 @@
 {
   "name": "arbor-family-tree",
-  "version": "1.0.6",
+  "version": "1.0.7",
   "description": "Obsidian plugin for visualising family trees from person notes",
   "main": "main.js",
   "scripts": {
     "build:html": "node generate-html-bundle.mjs",
     "dev": "npm run build:html && node esbuild.config.mjs",
     "build": "npm run build:html && tsc --noEmit --skipLibCheck && node esbuild.config.mjs production",
-    "deploy": "npm run build && mkdir -p ../../obsidianVault/.obsidian/plugins/arbor-family-tree && cp main.js manifest.json ../../obsidianVault/.obsidian/plugins/arbor-family-tree/ && cp manifest.json ../manifest.json",
+    "deploy": "npm run build && mkdir -p ../../obsidianVault/.obsidian/plugins/arbor-family-tree && cp main.js manifest.json styles.css ../../obsidianVault/.obsidian/plugins/arbor-family-tree/ && cp manifest.json ../manifest.json",
     "test": "node node_modules/vitest/vitest.mjs run",
     "test:watch": "node node_modules/vitest/vitest.mjs"
   },

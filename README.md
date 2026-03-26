@@ -4,23 +4,21 @@ An Obsidian plugin for building, visualising, and exporting a family tree stored
 
 Arbor grew out of a personal project to easily visualise my own family history. It is not designed to be a canonically correct genealogical tool — it is optimised for practical, everyday use by someone who wants to keep family records in Obsidian and share them with non-technical family members. (And hopefully, to look pretty). If you have similar motivations, it may suit you well.
 
-![Arbor tree view showing the Tudor family in light mode](docs/arbor_light.png)
-
-![and in dark mode](docs/arbor_dark.png)
+![Arbor tree view showing the Tudor family](docs/arbor_screenshot.png)
 
 ---
 
 ## Features
 
 - **Interactive tree view** — visualise your family tree as a navigable SVG diagram, rooted on any person
-- **Dark and light themes**
+- **Obsidian theme integration** — the tree view automatically follows your active Obsidian theme, including community themes
 - **Horizontal and vertical layout modes**
 - **Colour-coded edges** — edges from the same parent cycle through a muted colour palette to help trace individual lines; toggle between coloured and monochrome at any time
 - **Siblings toggle** — show blood-line siblings only, or all siblings including married-in relatives
 - **Persistent session state** — toolbar settings and last-viewed person are remembered between sessions
 - **Create Person Note** — modal command to add a new person note with the correct frontmatter
 - **Import People from CSV** — bulk-create person notes from a CSV file, with dry-run preview
-- **Export Tree as HTML** — generates a fully self-contained, interactive HTML file for sharing with anyone
+- **Export Tree as HTML** — generates a fully self-contained, interactive HTML file for sharing with anyone; colours are captured from your current Obsidian theme at export time, and the file includes a light/dark toggle
 - **Export Tree as GEDCOM** — exports to GEDCOM 5.5.1 for use with genealogy applications such as Gramps
 
 ---
@@ -43,8 +41,8 @@ Arbor grew out of a personal project to easily visualise my own family history. 
 
 ### Manual installation
 
-1. Download `main.js` and `manifest.json` from the [latest release](https://github.com/DisparateDan/arbor/releases)
-2. Copy them to `<your vault>/.obsidian/plugins/arbor-family-tree/`
+1. Download `main.js`, `manifest.json`, and `styles.css` from the [latest release](https://github.com/DisparateDan/arbor/releases)
+2. Copy all three files to `<your vault>/.obsidian/plugins/arbor-family-tree/`
 3. Enable the plugin in **Settings → Community plugins**
 
 ---
@@ -77,7 +75,6 @@ Click the tree icon in the ribbon, or run **Arbor Family Tree: Open Tree View** 
 - **Show All Siblings / Blood Siblings Only** toggles sibling display mode
 - **Colour Lines / Mono Lines** toggles between colour-coded and monochrome edges
 - **⇄ Vertical / ↕ Horizontal** switches layout orientation
-- **☀ Light / 🌙 Dark** switches colour theme
 
 ---
 
@@ -128,7 +125,7 @@ Arbor supports multiple independent family trees in one vault. Place each tree's
 
 ### HTML export
 
-Run **Arbor Family Tree: Export Tree as HTML** to generate a standalone HTML file saved to your vault root. The file is fully self-contained — no internet connection required — and can be shared with anyone who has a web browser. It includes the full interactive toolbar (navigation, theme toggle, layout toggle, colour lines toggle) and renders with coloured edges enabled by default.
+Run **Arbor Family Tree: Export Tree as HTML** to generate a standalone HTML file saved to your vault root. The file is fully self-contained — no internet connection required — and can be shared with anyone who has a web browser. Colours are captured from your active Obsidian theme at the moment of export, so the HTML matches exactly what you see in Obsidian. The file includes a **☀ Light / 🌙 Dark** toggle so recipients can switch between both colour sets in their browser.
 
 ### GEDCOM export
 

@@ -4,7 +4,7 @@ import { loadPeople, buildNameIndex } from "../loader";
 import { resolveName, resolveList, getYear } from "../tree";
 import type ArborPlugin from "../main";
 import { resolveTargetFolder } from "./newPerson";
-import type { PersonPage } from "../types";
+import type { PersonPage, Theme, ThemeKey } from "../types";
 
 // ── Data serialisation ────────────────────────────────────────────────────────
 // Converts vault PersonPage objects (may contain Dataview objects, wikilinks)
@@ -38,6 +38,76 @@ function serialisePeople(byName: Record<string, PersonPage>): Record<string, Pla
   return result;
 }
 
+// ── Theme capture ─────────────────────────────────────────────────────────────
+// Read the current Obsidian theme's computed CSS values to bake into the export.
+// Both dark and light sets are captured so the HTML toggle works correctly.
+
+function readThemeFromBody(): Theme {
+  const cs = getComputedStyle(document.body);
+  const g = (v: string) => cs.getPropertyValue(v).trim();
+  return {
+    containerBorder: g("--background-modifier-border"),
+    edge:            g("--arbor-edge"),
+    edgeSib:         g("--arbor-edge-sib"),
+    edgePalette:     [g("--arbor-edge-0"), g("--arbor-edge-1"), g("--arbor-edge-2"), g("--arbor-edge-3"), g("--arbor-edge-4")],
+    spouseLine:      g("--arbor-spouse-line"),
+    rootBorder:      g("--interactive-accent"),
+    text:            g("--text-normal"),
+    textRoot:        g("--arbor-text-root"),
+    textSib:         g("--text-muted"),
+    dates:           g("--text-muted"),
+    maleFill:        g("--arbor-male-fill"),
+    maleBorder:      g("--arbor-male-border"),
+    femaleFill:      g("--arbor-female-fill"),
+    femaleBorder:    g("--arbor-female-border"),
+    unknownFill:     g("--arbor-unknown-fill"),
+    unknownBorder:   g("--arbor-unknown-border"),
+    sibFill:         g("--arbor-sib-fill"),
+    sibBorder:       g("--arbor-sib-border"),
+    toolbarBg:       g("--background-secondary"),
+    toolbarBorder:   g("--background-modifier-border"),
+    btnBg:           g("--interactive-normal"),
+    btnBorder:       g("--background-modifier-border"),
+    btnColor:        g("--text-normal"),
+    bodyBg:          g("--background-primary"),
+  };
+}
+
+function captureThemes(): { themes: Record<ThemeKey, Theme>; initial: ThemeKey } {
+  const body = document.body;
+  const initial: ThemeKey = body.classList.contains("theme-light") ? "light" : "dark";
+
+  const currentTheme = readThemeFromBody();
+
+  // Temporarily swap body theme class to capture the other theme's computed values.
+  // Done synchronously so no repaint occurs.
+  if (initial === "dark") {
+    body.classList.remove("theme-dark");
+    body.classList.add("theme-light");
+  } else {
+    body.classList.remove("theme-light");
+    body.classList.add("theme-dark");
+  }
+  const otherTheme = readThemeFromBody();
+
+  // Restore original class.
+  if (initial === "dark") {
+    body.classList.remove("theme-light");
+    body.classList.add("theme-dark");
+  } else {
+    body.classList.remove("theme-dark");
+    body.classList.add("theme-light");
+  }
+
+  return {
+    themes: {
+      dark:  initial === "dark"  ? currentTheme : otherTheme,
+      light: initial === "light" ? currentTheme : otherTheme,
+    },
+    initial,
+  };
+}
+
 // ── HTML assembly ─────────────────────────────────────────────────────────────
 
 function buildHtml(people: Record<string, PlainPerson>, rootStem: string, rootDisplayName: string, folder: string): string {
@@ -46,6 +116,10 @@ function buildHtml(people: Record<string, PlainPerson>, rootStem: string, rootDi
   const folderName = folder.split("/")[0] || folder;
   const titleEsc   = `Arbor Family Tree: ${folderName}`
     .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+
+  const { themes, initial } = captureThemes();
+  const themesJson  = JSON.stringify(themes);
+  const initialJson = JSON.stringify(initial);
 
   return `<!DOCTYPE html>
 <html lang="en">
@@ -68,9 +142,11 @@ function buildHtml(people: Record<string, PlainPerson>, rootStem: string, rootDi
 <div id="arbor-toolbar"></div>
 <div id="arbor-tree"></div>
 <script>
-const ARBOR_PEOPLE  = ${peopleJson};
-const ARBOR_ROOT    = ${rootJson};
-const ARBOR_FOLDER  = ${JSON.stringify(folderName)};
+const ARBOR_PEOPLE        = ${peopleJson};
+const ARBOR_ROOT          = ${rootJson};
+const ARBOR_FOLDER        = ${JSON.stringify(folderName)};
+const ARBOR_THEMES        = ${themesJson};
+const ARBOR_INITIAL_THEME = ${initialJson};
 </script>
 <script>${HTML_BUNDLE}</script>
 </body>

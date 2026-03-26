@@ -4,24 +4,28 @@
  * Entry point for the self-contained HTML export bundle.
  * Compiled by generate-html-bundle.mjs into src/htmlBundle.ts.
  *
- * Expects two globals injected by a preceding <script> block in the HTML:
- *   ARBOR_PEOPLE  — Record<string, PlainPerson> (pre-resolved, plain strings)
- *   ARBOR_ROOT    — string  (file stem of the initial root person)
+ * Expects globals injected by a preceding <script> block in the HTML:
+ *   ARBOR_PEOPLE        — Record<string, PlainPerson> (pre-resolved, plain strings)
+ *   ARBOR_ROOT          — string  (file stem of the initial root person)
+ *   ARBOR_FOLDER        — string  (display name of the family tree folder)
+ *   ARBOR_THEMES        — { dark: Theme, light: Theme } (colours captured at export time)
+ *   ARBOR_INITIAL_THEME — "dark" | "light" (Obsidian's theme at the time of export)
  *
  * No Obsidian or Node.js dependencies — browser-only.
  */
 
-import { THEMES } from "./constants";
 import { buildTree } from "./tree";
 import { layout } from "./layout";
 import { buildSVG } from "./renderer";
-import type { GenderIndex, LayoutMode, PersonPage, ThemeKey } from "./types";
+import type { GenderIndex, LayoutMode, PersonPage, Theme, ThemeKey } from "./types";
 
 // ── Globals injected by the export command ────────────────────────────────────
 
 declare const ARBOR_PEOPLE: Record<string, PersonPage>;
 declare const ARBOR_ROOT: string;
 declare const ARBOR_FOLDER: string;
+declare const ARBOR_THEMES: Record<ThemeKey, Theme>;
+declare const ARBOR_INITIAL_THEME: ThemeKey;
 
 // ── Derived indexes ───────────────────────────────────────────────────────────
 
@@ -42,7 +46,7 @@ function displayName(stem: string): string {
 
 // ── View state ────────────────────────────────────────────────────────────────
 
-let currentTheme: ThemeKey    = "dark";
+let currentTheme: ThemeKey    = ARBOR_INITIAL_THEME;
 let currentLayout: LayoutMode = "horizontal";
 let siblingsBloodOnly         = true;
 let coloredEdges              = false;
@@ -55,7 +59,7 @@ const genderIndex = buildGenderIndex(ARBOR_PEOPLE);
 
 function render(rootName: string): void {
   currentRoot = rootName;
-  const t = THEMES[currentTheme];
+  const t = ARBOR_THEMES[currentTheme];
 
   document.body.style.background = t.bodyBg ?? "";
 
@@ -114,7 +118,7 @@ function render(rootName: string): void {
     render(currentRoot);
   });
 
-  btn(t.toggleLabel).addEventListener("click", () => {
+  btn(currentTheme === "dark" ? "☀ Light" : "🌙 Dark").addEventListener("click", () => {
     currentTheme = currentTheme === "dark" ? "light" : "dark";
     render(currentRoot);
   });

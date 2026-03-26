@@ -93,7 +93,6 @@ export interface Theme {
   btnBg: string;
   btnBorder: string;
   btnColor: string;
-  toggleLabel: string;
   bodyBg?: string;
 }
 
@@ -107,7 +106,6 @@ export interface ArborSettings {
   arborSchemaVersion: number;
   lastRoot?: string;
   lastFolder?: string;
-  lastTheme?: ThemeKey;
   lastLayout?: LayoutMode;
   coloredEdges?: boolean;
   siblingsBloodOnly?: boolean;
