@@ -4,7 +4,9 @@ An Obsidian plugin for building, visualising, and exporting a family tree stored
 
 Arbor grew out of a personal project to easily visualise my own family history. It is not designed to be a canonically correct genealogical tool — it is optimised for practical, everyday use by someone who wants to keep family records in Obsidian and share them with non-technical family members. (And hopefully, to look pretty). If you have similar motivations, it may suit you well.
 
-![Arbor tree view showing the Tudor family](docs/arbor_screenshot.png)
+![Arbor tree view showing the Tudor family in light mode, horizontal layout](docs/arbor_light.png)
+
+![Arbor tree view in dark mode, vertical layout](docs/arbor_dark.png)
 
 ---
 
