@@ -1,6 +1,6 @@
 {
   "name": "arbor-family-tree",
-  "version": "1.0.7",
+  "version": "1.1.0",
   "description": "Obsidian plugin for visualising family trees from person notes",
   "main": "main.js",
   "scripts": {
